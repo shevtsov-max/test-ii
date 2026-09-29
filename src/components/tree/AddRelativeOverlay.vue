@@ -1,17 +1,22 @@
-<script setup lang="ts">
+<script setup>
 import { computed, onBeforeUnmount, onMounted } from 'vue'
-import type { Gender, RelativeKind } from '@/types'
 import PersonAvatar from '@/components/common/PersonAvatar.vue'
 import { useTreeStore } from '@/stores/tree'
 import { useUiStore } from '@/stores/ui'
 import { lifeSpan, shortName } from '@/utils/person'
 
-const props = defineProps<{ personId: string; x: number; y: number; scale: number; compact?: boolean }>()
-const emit = defineEmits<{ close: [] }>()
+const props = defineProps({
+  personId: { type: String, required: true },
+  x: { type: Number, required: true },
+  y: { type: Number, required: true },
+  scale: { type: Number, required: true },
+  compact: Boolean,
+})
+const emit = defineEmits(['close'])
 const store = useTreeStore()
 const ui = useUiStore()
 
-const person = computed(() => store.person(props.personId)!)
+const person = computed(() => store.person(props.personId))
 const can = computed(() => store.canAdd(props.personId))
 
 const W = 920
@@ -23,17 +28,8 @@ const OH = 54
 const CW = 246
 const CH = 84
 
-interface Opt {
-  kind: RelativeKind
-  label: string
-  sub?: string
-  gender: Gender
-  x: number
-  y: number
-}
-
-const options = computed<Opt[]>(() => {
-  const list: Opt[] = []
+const options = computed(() => {
+  const list = []
   if (can.value.father) list.push({ kind: 'father', label: 'Добавить отца', gender: 'M', x: cx - 128, y: cy - 138 })
   if (can.value.mother) list.push({ kind: 'mother', label: 'Добавить мать', gender: 'F', x: cx + 128, y: cy - 138 })
   list.push({ kind: 'brother', label: 'Добавить брата', gender: 'M', x: cx - 340, y: cy - 44 })
@@ -54,7 +50,7 @@ const options = computed<Opt[]>(() => {
 
 const lines = computed(() => {
   const r = 10
-  const d: string[] = []
+  const d = []
   const o = options.value
   const par = o.filter((x) => x.kind === 'father' || x.kind === 'mother')
   if (par.length) {
@@ -64,28 +60,32 @@ const lines = computed(() => {
   // братья/сёстры — скобка слева
   const bx = cx - 340 + OW / 2 + 26
   d.push(`M ${cx - CW / 2} ${cy} L ${bx} ${cy}`)
-  d.push(`M ${cx - 340 + OW / 2} ${cy - 44} L ${bx - r} ${cy - 44} Q ${bx} ${cy - 44} ${bx} ${cy - 44 + r} L ${bx} ${cy + 44 - r} Q ${bx} ${cy + 44} ${bx - r} ${cy + 44} L ${cx - 340 + OW / 2} ${cy + 44}`)
+  d.push(
+    `M ${cx - 340 + OW / 2} ${cy - 44} L ${bx - r} ${cy - 44} Q ${bx} ${cy - 44} ${bx} ${cy - 44 + r} L ${bx} ${cy + 44 - r} Q ${bx} ${cy + 44} ${bx - r} ${cy + 44} L ${cx - 340 + OW / 2} ${cy + 44}`,
+  )
   // партнёр
   d.push(`M ${cx + CW / 2} ${cy} L ${cx + 340 - OW / 2} ${cy}`)
   // дети
   const yKids = cy + 138 - OH / 2 - 22
   for (const k of o.filter((x) => x.kind === 'son' || x.kind === 'daughter')) {
     const s = Math.sign(k.x - cx)
-    d.push(`M ${cx} ${cy + CH / 2} L ${cx} ${yKids - r} Q ${cx} ${yKids} ${cx + s * r} ${yKids} L ${k.x - s * r} ${yKids} Q ${k.x} ${yKids} ${k.x} ${yKids + r} L ${k.x} ${k.y - OH / 2}`)
+    d.push(
+      `M ${cx} ${cy + CH / 2} L ${cx} ${yKids - r} Q ${cx} ${yKids} ${cx + s * r} ${yKids} L ${k.x - s * r} ${yKids} Q ${k.x} ${yKids} ${k.x} ${yKids + r} L ${k.x} ${k.y - OH / 2}`,
+    )
   }
   return d
 })
 
-function choose(k: RelativeKind) {
+function choose(k) {
   ui.addRelative(props.personId, k)
 }
 
-function onDown(e: PointerEvent) {
+function onDown(e) {
   e.stopPropagation()
   if (e.target === e.currentTarget) emit('close')
 }
 
-function onKey(e: KeyboardEvent) {
+function onKey(e) {
   if (e.key === 'Escape') emit('close')
 }
 onMounted(() => window.addEventListener('keydown', onKey))

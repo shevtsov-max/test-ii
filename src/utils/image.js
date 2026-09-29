@@ -1,5 +1,5 @@
 /** Читает файл изображения и уменьшает до maxSize по большей стороне (JPEG). */
-export function fileToDataUrl(file: File, maxSize = 640, quality = 0.86): Promise<string> {
+export function fileToDataUrl(file, maxSize = 640, quality = 0.86) {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) return reject(new Error('Выберите файл изображения'))
     const reader = new FileReader()
@@ -14,19 +14,19 @@ export function fileToDataUrl(file: File, maxSize = 640, quality = 0.86): Promis
         const canvas = document.createElement('canvas')
         canvas.width = w
         canvas.height = h
-        const ctx = canvas.getContext('2d')!
+        const ctx = canvas.getContext('2d')
         ctx.fillStyle = '#fff'
         ctx.fillRect(0, 0, w, h)
         ctx.drawImage(img, 0, 0, w, h)
         resolve(canvas.toDataURL('image/jpeg', quality))
       }
-      img.src = reader.result as string
+      img.src = reader.result
     }
     reader.readAsDataURL(file)
   })
 }
 
-export function pickFile(accept = 'image/*', multiple = false): Promise<File[]> {
+export function pickFile(accept = 'image/*', multiple = false) {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -37,7 +37,7 @@ export function pickFile(accept = 'image/*', multiple = false): Promise<File[]> 
   })
 }
 
-export function downloadText(filename: string, text: string, mime = 'application/json') {
+export function downloadText(filename, text, mime = 'application/json') {
   const blob = new Blob([text], { type: `${mime};charset=utf-8` })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

@@ -2,17 +2,17 @@
  * Импорт / экспорт GEDCOM 5.5.1 — стандартный формат обмена родословными
  * (MyHeritage, Ancestry, FamilySearch, Gramps и др.).
  */
-import type { Fact, FactType, Family, FamilyStatus, GDate, Person, TreeData } from '@/types'
+
 import { emptyDate, emptyEvent, newFamily, newPerson, uid } from './person'
 
 const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
 // ------------------------------------------------------------------ dates
-function dmy(day?: number | null, month?: number | null, year?: number | null) {
+function dmy(day, month, year) {
   return [day && month ? day : null, month ? MON[month - 1] : null, year].filter(Boolean).join(' ')
 }
 
-export function toGedDate(d: GDate): string {
+export function toGedDate(d) {
   if (!d.year && !d.month && !d.day) return ''
   const main = dmy(d.day, d.month, d.year)
   switch (d.qualifier) {
@@ -33,11 +33,11 @@ export function toGedDate(d: GDate): string {
   }
 }
 
-function parseSimple(s: string): { day: number | null; month: number | null; year: number | null } {
+function parseSimple(s) {
   const tokens = s.trim().toUpperCase().split(/\s+/).filter(Boolean)
-  let day: number | null = null
-  let month: number | null = null
-  let year: number | null = null
+  let day = null
+  let month = null
+  let year = null
   for (const t of tokens) {
     const mi = MON.indexOf(t.slice(0, 3))
     if (mi >= 0 && /^[A-Z]+$/.test(t)) month = mi + 1
@@ -47,7 +47,7 @@ function parseSimple(s: string): { day: number | null; month: number | null; yea
   return { day, month, year }
 }
 
-export function fromGedDate(raw: string | undefined): GDate {
+export function fromGedDate(raw) {
   const d = emptyDate()
   if (!raw) return d
   let s = raw.trim().toUpperCase().replace(/[()]/g, '')
@@ -73,7 +73,7 @@ export function fromGedDate(raw: string | undefined): GDate {
 }
 
 // ------------------------------------------------------------------ export
-const FACT_TAG: Partial<Record<FactType, string>> = {
+const FACT_TAG = {
   baptism: 'BAPM',
   education: 'EDUC',
   occupation: 'OCCU',
@@ -85,8 +85,8 @@ const FACT_TAG: Partial<Record<FactType, string>> = {
   nationality: 'NATI',
 }
 
-function textLines(level: number, tag: string, text: string): string[] {
-  const out: string[] = []
+function textLines(level, tag, text) {
+  const out = []
   const lines = text.split(/\r?\n/)
   lines.forEach((line, i) => {
     const chunks = line.match(/.{1,200}/gu) ?? ['']
@@ -99,7 +99,7 @@ function textLines(level: number, tag: string, text: string): string[] {
   return out
 }
 
-function eventLines(level: number, tag: string, date: GDate, place: string, forceY = false): string[] {
+function eventLines(level, tag, date, place, forceY = false) {
   const d = toGedDate(date)
   if (!d && !place) return forceY ? [`${level} ${tag} Y`] : []
   const out = [`${level} ${tag}`]
@@ -108,13 +108,13 @@ function eventLines(level: number, tag: string, date: GDate, place: string, forc
   return out
 }
 
-export function exportGedcom(t: TreeData): string {
-  const iid = new Map<string, string>()
-  const fid = new Map<string, string>()
+export function exportGedcom(t) {
+  const iid = new Map()
+  const fid = new Map()
   Object.keys(t.persons).forEach((id, i) => iid.set(id, `@I${i + 1}@`))
   Object.keys(t.families).forEach((id, i) => fid.set(id, `@F${i + 1}@`))
   const now = new Date()
-  const L: string[] = [
+  const L = [
     '0 HEAD',
     '1 SOUR RODOSLOVNAYA',
     '2 NAME Родословная (Vue 3 + Quasar)',
@@ -171,9 +171,7 @@ export function exportGedcom(t: TreeData): string {
 
   for (const f of Object.values(t.families)) {
     L.push(`0 ${fid.get(f.id)} FAM`)
-    const sorted = [...f.partners].sort((a, b) =>
-      t.persons[a]?.gender === 'F' ? 1 : t.persons[b]?.gender === 'F' ? -1 : 0,
-    )
+    const sorted = [...f.partners].sort((a, b) => (t.persons[a]?.gender === 'F' ? 1 : t.persons[b]?.gender === 'F' ? -1 : 0))
     sorted.forEach((pid, i) => {
       const g = t.persons[pid]?.gender
       const tag = g === 'M' ? 'HUSB' : g === 'F' ? 'WIFE' : i === 0 ? 'HUSB' : 'WIFE'
@@ -190,22 +188,14 @@ export function exportGedcom(t: TreeData): string {
 }
 
 // ------------------------------------------------------------------ import
-interface Node {
-  level: number
-  xref?: string
-  tag: string
-  value: string
-  children: Node[]
-}
-
-function parseLines(text: string): Node[] {
-  const roots: Node[] = []
-  const stack: Node[] = []
+function parseLines(text) {
+  const roots = []
+  const stack = []
   for (const rawLine of text.replace(/^﻿/, '').split(/\r?\n|\r/)) {
     if (!rawLine.trim()) continue
     const m = rawLine.match(/^\s*(\d+)\s+(?:(@[^@]+@)\s+)?(\S+)(?: (.*))?$/)
     if (!m) continue
-    const node: Node = { level: +m[1], xref: m[2], tag: m[3].toUpperCase(), value: m[4] ?? '', children: [] }
+    const node = { level: +m[1], xref: m[2], tag: m[3].toUpperCase(), value: m[4] ?? '', children: [] }
     if (node.tag === 'CONT' || node.tag === 'CONC') {
       const parent = stack[node.level - 1]
       if (parent) parent.value += (node.tag === 'CONT' ? '\n' : '') + node.value
@@ -220,10 +210,10 @@ function parseLines(text: string): Node[] {
   return roots
 }
 
-const child = (n: Node, tag: string) => n.children.find((c) => c.tag === tag)
-const childVal = (n: Node, tag: string) => child(n, tag)?.value?.trim() ?? ''
+const child = (n, tag) => n.children.find((c) => c.tag === tag)
+const childVal = (n, tag) => child(n, tag)?.value?.trim() ?? ''
 
-const TAG_FACT: Record<string, FactType> = {
+const TAG_FACT = {
   BAPM: 'baptism',
   CHR: 'baptism',
   EDUC: 'education',
@@ -238,16 +228,16 @@ const TAG_FACT: Record<string, FactType> = {
   _MILI: 'military',
 }
 
-export function importGedcom(text: string, name = 'Импортированное древо'): TreeData {
+export function importGedcom(text, name = 'Импортированное древо') {
   const roots = parseLines(text)
-  const notes = new Map<string, string>()
+  const notes = new Map()
   for (const r of roots) if (r.tag === 'NOTE' && r.xref) notes.set(r.xref, r.value)
-  const noteText = (n: Node) => (n.value.startsWith('@') ? (notes.get(n.value.trim()) ?? '') : n.value)
+  const noteText = (n) => (n.value.startsWith('@') ? (notes.get(n.value.trim()) ?? '') : n.value)
 
-  const persons: Record<string, Person> = {}
-  const families: Record<string, Family> = {}
-  const idMap = new Map<string, string>()
-  let homeRef: string | undefined
+  const persons = {}
+  const families = {}
+  const idMap = new Map()
+  let homeRef
   let treeName = name
 
   const head = roots.find((r) => r.tag === 'HEAD')
@@ -299,7 +289,7 @@ export function importGedcom(text: string, name = 'Импортированно�
       else if (TAG_FACT[c.tag] || c.tag === 'EVEN' || c.tag === 'FACT') {
         const type = TAG_FACT[c.tag]
         const tType = childVal(c, 'TYPE')
-        const fact: Fact = {
+        const fact = {
           id: uid('fa'),
           type: type ?? (/milit|воен/i.test(tType) ? 'military' : /award|наград/i.test(tType) ? 'award' : 'custom'),
           title: type ? '' : tType,
@@ -327,9 +317,9 @@ export function importGedcom(text: string, name = 'Импортированно�
     if (marr) f.marriage = { date: fromGedDate(childVal(marr, 'DATE')), place: childVal(marr, 'PLAC') }
     if (div) f.divorce = { date: fromGedDate(childVal(div, 'DATE')), place: childVal(div, 'PLAC') }
     else f.divorce = emptyEvent()
-    const known: FamilyStatus[] = ['married', 'partners', 'engaged', 'divorced', 'separated', 'widowed', 'unknown']
-    f.status = known.includes(stat as FamilyStatus)
-      ? (stat as FamilyStatus)
+    const known = ['married', 'partners', 'engaged', 'divorced', 'separated', 'widowed', 'unknown']
+    f.status = known.includes(stat)
+      ? stat
       : div || /divorc/.test(stat)
         ? 'divorced'
         : /separ/.test(stat)
@@ -350,14 +340,20 @@ export function importGedcom(text: string, name = 'Импортированно�
 }
 
 /** Проверка и нормализация JSON-резервной копии. */
-export function validateTreeJson(raw: unknown): TreeData {
-  const d = raw as TreeData
+export function validateTreeJson(raw) {
+  const d = raw
   if (!d || typeof d !== 'object' || !d.persons || !d.families) throw new Error('Неверный формат файла')
-  const persons: Record<string, Person> = {}
+  const persons = {}
   for (const [id, p] of Object.entries(d.persons)) {
-    persons[id] = { ...newPerson(), ...p, id, birth: { ...emptyEvent(), ...p.birth }, death: { ...emptyEvent(), ...p.death, cause: p.death?.cause ?? '' } }
+    persons[id] = {
+      ...newPerson(),
+      ...p,
+      id,
+      birth: { ...emptyEvent(), ...p.birth },
+      death: { ...emptyEvent(), ...p.death, cause: p.death?.cause ?? '' },
+    }
   }
-  const families: Record<string, Family> = {}
+  const families = {}
   for (const [id, f] of Object.entries(d.families)) {
     families[id] = {
       ...newFamily(),
@@ -371,7 +367,7 @@ export function validateTreeJson(raw: unknown): TreeData {
     version: 1,
     id: d.id ?? uid('tree'),
     name: d.name ?? 'Семейное древо',
-    homePersonId: d.homePersonId && persons[d.homePersonId] ? d.homePersonId : Object.keys(persons)[0] ?? null,
+    homePersonId: d.homePersonId && persons[d.homePersonId] ? d.homePersonId : (Object.keys(persons)[0] ?? null),
     persons,
     families,
   }

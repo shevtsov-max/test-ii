@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref } from 'vue'
 import PersonAvatar from '@/components/common/PersonAvatar.vue'
 import RelativeMenu from '@/components/common/RelativeMenu.vue'
@@ -23,8 +23,8 @@ const relatives = computed(() => {
   if (!id) return []
   const par = store.parentsOf(id)
   const sib = store.siblingsOf(id)
-  const groups: { title: string; items: { id: string; note?: string }[] }[] = [
-    { title: 'Родители', items: [par.father, par.mother].filter(Boolean).map((x) => ({ id: x! })) },
+  const groups = [
+    { title: 'Родители', items: [par.father, par.mother].filter(Boolean).map((x) => ({ id: x })) },
     {
       title: 'Партнёры',
       items: store.partnersOf(id).map((x) => ({
@@ -46,24 +46,22 @@ const timeline = usePersonTimeline(p)
 const showRelatives = ref(true)
 const showFacts = ref(true)
 
-function goTo(id: string) {
+function goTo(id) {
   store.select(id)
 }
 
 function birthLine() {
-  const x = p.value!
+  const x = p.value
   const d = formatDate(x.birth.date)
   const age = x.living ? ageOf(x) : ''
   return [d, age && `(${age})`, x.birth.place && `· ${x.birth.place}`].filter(Boolean).join(' ')
 }
 function deathLine() {
-  const x = p.value!
+  const x = p.value
   if (x.living) return ''
   const d = formatDate(x.death.date)
   const age = ageOf(x)
-  return [d || 'дата неизвестна', age && `(в возрасте ${age})`, x.death.place && `· ${x.death.place}`]
-    .filter(Boolean)
-    .join(' ')
+  return [d || 'дата неизвестна', age && `(в возрасте ${age})`, x.death.place && `· ${x.death.place}`].filter(Boolean).join(' ')
 }
 </script>
 
@@ -201,7 +199,7 @@ function deathLine() {
               <q-item-section>
                 <q-item-label class="text-weight-medium">{{ fullName(store.person(r.id)) }}</q-item-label>
                 <q-item-label caption>
-                  {{ [lifeSpan(store.person(r.id)!), r.note].filter(Boolean).join(' · ') }}
+                  {{ [lifeSpan(store.person(r.id)), r.note].filter(Boolean).join(' · ') }}
                 </q-item-label>
               </q-item-section>
               <q-item-section side>

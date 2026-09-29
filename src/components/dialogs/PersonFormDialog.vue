@@ -1,7 +1,6 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import type { FamilyStatus, Gender, LifeEvent, RelativeKind } from '@/types'
 import DateInput from '@/components/common/DateInput.vue'
 import PlaceInput from '@/components/common/PlaceInput.vue'
 import PersonSelect from '@/components/common/PersonSelect.vue'
@@ -24,9 +23,9 @@ const open = computed({
 })
 const isEdit = computed(() => state.value.mode === 'edit')
 const target = computed(() => store.person(state.value.targetId))
-const kind = computed<RelativeKind | null>(() => state.value.kind)
+const kind = computed(() => state.value.kind)
 
-const KIND_TITLE: Record<RelativeKind, string> = {
+const KIND_TITLE = {
   father: 'Добавить отца',
   mother: 'Добавить мать',
   brother: 'Добавить брата',
@@ -37,27 +36,27 @@ const KIND_TITLE: Record<RelativeKind, string> = {
 }
 
 // ---------------------------------------------------------------- form
-const source = ref<'new' | 'existing'>('new')
-const existingId = ref<string | null>(null)
+const source = ref('new')
+const existingId = ref(null)
 
-const gender = ref<Gender>('U')
+const gender = ref('U')
 const firstName = ref('')
 const middleName = ref('')
 const lastName = ref('')
 const birthName = ref('')
 const title = ref('')
 const suffix = ref('')
-const birth = ref<LifeEvent>(emptyEvent())
-const death = ref<LifeEvent & { cause: string }>({ ...emptyEvent(), cause: '' })
+const birth = ref(emptyEvent())
+const death = ref({ ...emptyEvent(), cause: '' })
 const living = ref(true)
 const email = ref('')
 const nameInput = ref()
 
 // связи
-const familyChoice = ref<string | null>(null)
-const status = ref<FamilyStatus>('married')
-const marriage = ref<LifeEvent>(emptyEvent())
-const joinFamilyId = ref<string | null>(null)
+const familyChoice = ref(null)
+const status = ref('married')
+const marriage = ref(emptyEvent())
+const joinFamilyId = ref(null)
 const joinKids = ref(true)
 
 const middleTouched = ref(false)
@@ -98,8 +97,8 @@ watch(
       email.value = p.email
       return
     }
-    const k = kind.value!
-    const t = target.value!
+    const k = kind.value
+    const t = target.value
     gender.value =
       k === 'father' || k === 'brother' || k === 'son'
         ? 'M'
@@ -198,15 +197,17 @@ const childFamilyOptions = computed(() => {
     })
   return opts
 })
-const otherParentLabel = computed(() => (target.value?.gender === 'F' ? 'Отец' : target.value?.gender === 'M' ? 'Мать' : 'Второй родитель'))
+const otherParentLabel = computed(() =>
+  target.value?.gender === 'F' ? 'Отец' : target.value?.gender === 'M' ? 'Мать' : 'Второй родитель',
+)
 
 const siblingFamilyOptions = computed(() => {
   const t = target.value
   if (!t) return []
   const { family, father, mother } = store.parentsOf(t.id)
   if (!family) return []
-  const name = (id?: string) => (id ? shortName(store.person(id)) : '?')
-  const opts: { value: string; label: string; caption?: string }[] = [
+  const name = (id) => (id ? shortName(store.person(id)) : '?')
+  const opts = [
     {
       value: family.id,
       label: family.partners.length ? `Те же родители` : 'Те же (неизвестные) родители',
@@ -238,7 +239,7 @@ const joinFamily = computed(() => (joinFamilyId.value ? store.tree.families[join
 
 const dialogTitle = computed(() => {
   if (isEdit.value) return 'Изменить персону'
-  return KIND_TITLE[kind.value!]
+  return KIND_TITLE[kind.value]
 })
 
 const canSubmit = computed(() => {
@@ -273,16 +274,16 @@ function submit(openProfile = false) {
   }
   try {
     if (isEdit.value) {
-      const id = state.value.personId!
+      const id = state.value.personId
       store.updatePerson(id, collect())
       open.value = false
       if (openProfile) ui.openProfile(id, 'bio')
       $q.notify({ type: 'positive', message: 'Изменения сохранены', timeout: 1500 })
       return
     }
-    const k = kind.value!
-    const t = target.value!
-    const opts: Parameters<typeof store.addRelative>[3] = {
+    const k = kind.value
+    const t = target.value
+    const opts = {
       existingId: source.value === 'existing' ? existingId.value : null,
     }
     if (k === 'son' || k === 'daughter') opts.familyId = familyChoice.value === 'single' ? null : familyChoice.value
@@ -298,17 +299,15 @@ function submit(openProfile = false) {
       if (fam) store.updateFamily(fam.id, { marriage: marriage.value })
     }
     open.value = false
-    const p = store.person(id)!
+    const p = store.person(id)
     $q.notify({
       type: 'positive',
       message: `${shortName(p)} ${source.value === 'existing' ? 'связан(а) с древом' : 'добавлен(а) в древо'}`,
-      actions: [
-        { label: 'Показать', color: 'white', handler: () => store.setFocus(id) },
-      ],
+      actions: [{ label: 'Показать', color: 'white', handler: () => store.setFocus(id) }],
     })
     if (openProfile) ui.openProfile(id, 'bio')
   } catch (e) {
-    $q.notify({ type: 'negative', message: (e as Error).message })
+    $q.notify({ type: 'negative', message: e.message })
   }
 }
 

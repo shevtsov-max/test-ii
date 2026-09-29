@@ -7,7 +7,7 @@
  * Упаковка поддеревьев — контурная (как в алгоритме Reingold–Tilford),
  * поэтому древо получается компактным без пересечений.
  */
-import type { Family, FamilyStatus, TreeData } from '@/types'
+
 import { orderPartners, parentFamily, spouseFamilies, partnerIn, byBirth } from './graph'
 
 export const CARD_W = 196
@@ -19,77 +19,18 @@ export const SIB_GAP = 26
 export const GROUP_GAP = 44
 export const ROW_H = CARD_H + 88
 
-export interface LNode {
-  key: string
-  kind: 'person' | 'placeholder'
-  personId?: string
-  role?: 'father' | 'mother'
-  forId?: string
-  x: number
-  row: number
-  w: number
-  h: number
-  focus?: boolean
-  dup?: boolean
-  moreUp?: boolean
-  moreDown?: boolean
-  /** Заполняется в конце */
-  left?: number
-  top?: number
-}
-
-export interface CoupleLink {
-  type: 'couple'
-  key: string
-  familyId: string | null
-  status: FamilyStatus
-  a: LNode
-  b: LNode
-  dashed?: boolean
-}
-
-export interface ChildLink {
-  type: 'children'
-  key: string
-  familyId: string | null
-  parents: LNode[]
-  children: LNode[]
-  dashed?: boolean
-}
-
-type Link = CoupleLink | ChildLink
-
-export interface RenderedLink {
-  key: string
-  kind: 'couple' | 'child' | 'bar'
-  d: string
-  dashed: boolean
-  familyId: string | null
-  status?: FamilyStatus
-  /** точка для значка статуса пары */
-  badge?: { x: number; y: number }
-}
-
-export interface LayoutResult {
-  nodes: LNode[]
-  links: RenderedLink[]
-  bounds: { minX: number; minY: number; maxX: number; maxY: number }
-  focusNode: LNode | null
-  shownPersons: Set<string>
-}
-
 class Shape {
-  nodes: LNode[] = []
-  links: Link[] = []
-  contour = new Map<number, [number, number]>()
+  nodes = []
+  links = []
+  contour = new Map()
 
-  add(n: LNode) {
+  add(n) {
     this.nodes.push(n)
     this.extend(n.row, n.x - n.w / 2, n.x + n.w / 2)
     return n
   }
 
-  extend(row: number, a: number, b: number) {
+  extend(row, a, b) {
     const c = this.contour.get(row)
     if (!c) this.contour.set(row, [a, b])
     else {
@@ -98,7 +39,7 @@ class Shape {
     }
   }
 
-  shift(dx: number) {
+  shift(dx) {
     if (!dx) return
     for (const n of this.nodes) n.x += dx
     for (const c of this.contour.values()) {
@@ -107,7 +48,7 @@ class Shape {
     }
   }
 
-  merge(o: Shape) {
+  merge(o) {
     this.nodes.push(...o.nodes)
     this.links.push(...o.links)
     for (const [r, [a, b]] of o.contour) this.extend(r, a, b)
@@ -125,11 +66,10 @@ class Shape {
   }
 }
 
-type GapFn = (row: number) => number
-const constGap = (g: number): GapFn => () => g
+const constGap = (g) => () => g
 
 /** Сдвиг, который нужно применить к B, чтобы он оказался справа от A. */
-function rightOffset(A: Shape, B: Shape, gap: GapFn): number {
+function rightOffset(A, B, gap) {
   let dx = -Infinity
   let common = false
   for (const [r, [, amax]] of A.contour) {
@@ -146,7 +86,7 @@ function rightOffset(A: Shape, B: Shape, gap: GapFn): number {
 }
 
 /** Максимальный сдвиг B (может быть отрицательным), при котором B остаётся слева от A. */
-function leftLimit(A: Shape, B: Shape, gap: GapFn): number {
+function leftLimit(A, B, gap) {
   let dx = Infinity
   for (const [r, [amin]] of A.contour) {
     const bc = B.contour.get(r)
@@ -156,7 +96,7 @@ function leftLimit(A: Shape, B: Shape, gap: GapFn): number {
   return dx
 }
 
-function packRow(shapes: Shape[], gap: GapFn = constGap(SIB_GAP)): Shape {
+function packRow(shapes, gap = constGap(SIB_GAP)) {
   const out = new Shape()
   for (const s of shapes) {
     if (out.nodes.length) s.shift(rightOffset(out, s, gap))
@@ -165,28 +105,20 @@ function packRow(shapes: Shape[], gap: GapFn = constGap(SIB_GAP)): Shape {
   return out
 }
 
-const centerOf = (nodes: LNode[]) =>
-  nodes.length ? (Math.min(...nodes.map((n) => n.x)) + Math.max(...nodes.map((n) => n.x))) / 2 : 0
+const centerOf = (nodes) => (nodes.length ? (Math.min(...nodes.map((n) => n.x)) + Math.max(...nodes.map((n) => n.x))) / 2 : 0)
 
-export interface LayoutOptions {
-  up: number
-  down: number
-  placeholders: boolean
-  siblings: boolean
-}
-
-export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions): LayoutResult {
-  const expanded = new Set<string>()
-  const keyCount = new Map<string, number>()
-  const famCache = new Map<string, Family[]>()
-  const sf = (pid: string) => {
+export function computeLayout(t, focusId, opts) {
+  const expanded = new Set()
+  const keyCount = new Map()
+  const famCache = new Map()
+  const sf = (pid) => {
     let v = famCache.get(pid)
     if (!v) famCache.set(pid, (v = spouseFamilies(t, pid)))
     return v
   }
   const sortBirth = byBirth(t)
 
-  function personNode(pid: string, row: number): LNode {
+  function personNode(pid, row) {
     const n = (keyCount.get(pid) ?? 0) + 1
     keyCount.set(pid, n)
     return {
@@ -201,7 +133,7 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     }
   }
 
-  function placeholder(forId: string, role: 'father' | 'mother', row: number): LNode {
+  function placeholder(forId, role, row) {
     return { key: `ph-${role}-${forId}`, kind: 'placeholder', role, forId, x: 0, row, w: PH_W, h: PH_H }
   }
 
@@ -209,13 +141,13 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
    * Строка «персона + партнёры». Возвращает узел персоны и узлы партнёров по семьям.
    * sideHint: для предков по отцовской линии других партнёров ставим слева, по материнской — справа.
    */
-  function unit(pid: string, row: number, sideHint: 'auto' | 'left' | 'right' = 'auto') {
+  function unit(pid, row, sideHint = 'auto') {
     const s = new Shape()
     const fams = sf(pid)
     const withPartner = fams.filter((f) => partnerIn(f, pid))
     const me = personNode(pid, row)
     const gender = t.persons[pid]?.gender
-    let order: (LNode | { fam: Family })[]
+    let order
     const partnerItems = withPartner.map((f) => ({ fam: f }))
     if (sideHint === 'left') order = [...partnerItems.reverse(), me]
     else if (sideHint === 'right') order = [me, ...partnerItems]
@@ -224,12 +156,12 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     else if (partnerItems.length === 2) order = [partnerItems[0], me, partnerItems[1]]
     else order = gender === 'F' ? [...partnerItems.reverse(), me] : [me, ...partnerItems]
 
-    const partnerNodes = new Map<string, LNode>()
+    const partnerNodes = new Map()
     let x = 0
     for (const item of order) {
-      let node: LNode
+      let node
       if ('fam' in item) {
-        node = personNode(partnerIn(item.fam, pid)!, row)
+        node = personNode(partnerIn(item.fam, pid), row)
         partnerNodes.set(item.fam.id, node)
         s.links.push({
           type: 'couple',
@@ -252,7 +184,7 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
   }
 
   /** Поддерево потомков. */
-  function desc(pid: string, row: number, depth: number): Shape {
+  function desc(pid, row, depth) {
     if (expanded.has(pid)) {
       const s = new Shape()
       s.add(personNode(pid, row))
@@ -261,17 +193,16 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     expanded.add(pid)
     const u = unit(pid, row)
     const s = u.shape
-    for (const pn of u.partnerNodes.values()) expanded.add(pn.personId!)
+    for (const pn of u.partnerNodes.values()) expanded.add(pn.personId)
     if (depth <= 0) return s
 
-    type G = { shape: Shape; anchor: number; kids: LNode[]; fam: Family }
-    const groups: G[] = []
+    const groups = []
     for (const f of u.fams) {
       const kids = [...f.children].sort(sortBirth).filter((k) => t.persons[k])
       if (!kids.length) continue
       const shapes = kids.map((k) => desc(k, row + 1, depth - 1))
       // первичный узел каждого ребёнка
-      const primary = shapes.map((sh, i) => sh.nodes.find((n) => n.personId === kids[i] && n.row === row + 1)!)
+      const primary = shapes.map((sh, i) => sh.nodes.find((n) => n.personId === kids[i] && n.row === row + 1))
       const g = packRow(shapes)
       const pn = u.partnerNodes.get(f.id)
       const anchor = pn ? (pn.x + u.me.x) / 2 : u.me.x
@@ -279,7 +210,7 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     }
     groups.sort((a, b) => a.anchor - b.anchor)
     const acc = new Shape()
-    const placed: G[] = []
+    const placed = []
     for (const g of groups) {
       let dx = g.anchor - centerOf(g.kids)
       if (acc.nodes.length) {
@@ -311,25 +242,17 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
   }
 
   /** Строка без потомков: персона + партнёры (для братьев/сестёр предков). */
-  function flat(pid: string, row: number): Shape {
+  function flat(pid, row) {
     expanded.add(pid)
     const u = unit(pid, row)
-    for (const pn of u.partnerNodes.values()) expanded.add(pn.personId!)
+    for (const pn of u.partnerNodes.values()) expanded.add(pn.personId)
     return u.shape
   }
 
   /**
    * Добавляет к фигуре S (содержащей персону X) её братьев/сестёр, родителей и всех предков.
    */
-  function up(
-    X: string,
-    S: Shape,
-    nodeX: LNode,
-    row: number,
-    levels: number,
-    side: 'left' | 'right' | 'center',
-    sibDesc: boolean,
-  ): Shape {
+  function up(X, S, nodeX, row, levels, side, sibDesc) {
     const pf = parentFamily(t, X)
     const hasParentsVisible = levels > 0
 
@@ -348,13 +271,13 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     }
 
     const [fa, mo] = orderPartners(t, pf)
-    const make = (pid: string) => (sibDesc ? desc(pid, row, opts.down) : flat(pid, row))
-    const primaryOf = (sh: Shape, pid: string) => sh.nodes.find((n) => n.personId === pid && n.row === row)!
+    const make = (pid) => (sibDesc ? desc(pid, row, opts.down) : flat(pid, row))
+    const primaryOf = (sh, pid) => sh.nodes.find((n) => n.personId === pid && n.row === row)
 
     // --- Полные братья и сёстры
     const sibIds = opts.siblings ? pf.children.filter((c) => c !== X && t.persons[c]).sort(sortBirth) : []
     const sibShapes = sibIds.map((id) => ({ id, shape: make(id) }))
-    let ordered: { id: string; shape: Shape }[]
+    let ordered
     const self = { id: X, shape: S }
     if (side === 'left') ordered = [...sibShapes, self]
     else if (side === 'right') ordered = [self, ...sibShapes]
@@ -368,24 +291,24 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     const faFams = fa && opts.siblings ? sf(fa).filter((f) => f.id !== pf.id) : []
     const moFams = mo && opts.siblings ? sf(mo).filter((f) => f.id !== pf.id) : []
 
-    let A1: Shape | null = null
-    let A2: Shape | null = null
-    let faNode: LNode | null = null
-    let moNode: LNode | null = null
-    const faOther = new Map<string, LNode>()
-    const moOther = new Map<string, LNode>()
+    let A1 = null
+    let A2 = null
+    let faNode = null
+    let moNode = null
+    const faOther = new Map()
+    const moOther = new Map()
 
-    const buildParentUnit = (pid: string, others: Family[], sideP: 'left' | 'right', store: Map<string, LNode>) => {
+    const buildParentUnit = (pid, others, sideP, store) => {
       const s = new Shape()
       const me = personNode(pid, row - 1)
       expanded.add(pid)
-      const partnered = others.filter((f) => partnerIn(f, pid) && t.persons[partnerIn(f, pid)!])
-      const items: (LNode | Family)[] = sideP === 'left' ? [...[...partnered].reverse(), me] : [me, ...partnered]
+      const partnered = others.filter((f) => partnerIn(f, pid) && t.persons[partnerIn(f, pid)])
+      const items = sideP === 'left' ? [...[...partnered].reverse(), me] : [me, ...partnered]
       let x = 0
       for (const it of items) {
-        let n: LNode
+        let n
         if ('partners' in it) {
-          const other = partnerIn(it, pid)!
+          const other = partnerIn(it, pid)
           n = personNode(other, row - 1)
           expanded.add(other)
           store.set(it.id, n)
@@ -395,7 +318,7 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
         x += CARD_W + COUPLE_GAP
       }
       for (const f of partnered) {
-        const n = store.get(f.id)!
+        const n = store.get(f.id)
         const [a, b] = n.x < me.x ? [n, me] : [me, n]
         s.links.push({ type: 'couple', key: `c-${f.id}`, familyId: f.id, status: f.status, a, b })
       }
@@ -426,7 +349,7 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
       upper.merge(A2)
     }
 
-    let anchor: number
+    let anchor
     if (faNode && moNode) {
       anchor = (faNode.x + moNode.x) / 2
       const bothReal = faNode.kind === 'person' && moNode.kind === 'person'
@@ -444,7 +367,7 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     full.shift(anchor - centerOf(kidsNodes))
     const G = new Shape()
     G.merge(full)
-    const parentsNodes = [faNode, moNode].filter(Boolean) as LNode[]
+    const parentsNodes = [faNode, moNode].filter(Boolean)
     G.links.push({
       type: 'children',
       key: `k-${pf.id}`,
@@ -455,7 +378,7 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     })
 
     // --- Сводные братья/сёстры
-    const halfGroup = (f: Family, parentNode: LNode, otherNode: LNode | undefined, dir: 'left' | 'right') => {
+    const halfGroup = (f, parentNode, otherNode, dir) => {
       const kids = f.children.filter((c) => t.persons[c] && !expanded.has(c)).sort(sortBirth)
       if (!kids.length) return
       const shapes = kids.map((k) => make(k))
@@ -494,14 +417,17 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
     return { nodes: [], links: [], bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 }, focusNode: null, shownPersons: new Set() }
   }
   const S = desc(focusId, 0, opts.down)
-  const nodeF = S.nodes.find((n) => n.personId === focusId && n.row === 0)!
+  const nodeF = S.nodes.find((n) => n.personId === focusId && n.row === 0)
   nodeF.focus = true
   const all = up(focusId, S, nodeF, 0, opts.up, 'center', true)
 
   // --- Финальные координаты и флаги
-  const shown = new Set<string>()
+  const shown = new Set()
   for (const n of all.nodes) if (n.personId) shown.add(n.personId)
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity
   for (const n of all.nodes) {
     n.left = n.x - n.w / 2
     n.top = n.row * ROW_H + (CARD_H - n.h) / 2
@@ -530,20 +456,20 @@ export function computeLayout(t: TreeData, focusId: string, opts: LayoutOptions)
 // -----------------------------------------------------------------------------
 const R = 10
 
-function midY(n: LNode) {
+function midY(n) {
   return n.row * ROW_H + CARD_H / 2
 }
 
-function renderLinks(links: Link[], nodes: LNode[]): RenderedLink[] {
-  const out: RenderedLink[] = []
-  const byRow = new Map<number, number[]>()
+function renderLinks(links, nodes) {
+  const out = []
+  const byRow = new Map()
   for (const n of nodes) {
     const arr = byRow.get(n.row) ?? []
     arr.push(n.x)
     byRow.set(n.row, arr)
   }
   /** Между a и b в строке нет других карточек */
-  const adjacent = (a: LNode, b: LNode) => {
+  const adjacent = (a, b) => {
     const lo = Math.min(a.x, b.x)
     const hi = Math.max(a.x, b.x)
     return !(byRow.get(a.row) ?? []).some((x) => x > lo + 1 && x < hi - 1)
@@ -588,8 +514,8 @@ function renderLinks(links: Link[], nodes: LNode[]): RenderedLink[] {
     if (!kids.length) continue
     const childTop = kids[0].row * ROW_H + (CARD_H - kids[0].h) / 2
     const busY = kids[0].row * ROW_H - (ROW_H - CARD_H) / 2
-    let ax: number
-    let ay: number
+    let ax
+    let ay
     if (l.parents.length === 2) {
       const [p, q] = l.parents[0].x <= l.parents[1].x ? l.parents : [l.parents[1], l.parents[0]]
       if (adjacent(p, q)) {
@@ -617,7 +543,13 @@ function renderLinks(links: Link[], nodes: LNode[]): RenderedLink[] {
         familyId: l.familyId,
       })
       for (const k of kids)
-        out.push({ key: `${l.key}-${k.key}`, kind: 'child', d: `M ${k.x} ${busY} L ${k.x} ${childTop}`, dashed: true, familyId: l.familyId })
+        out.push({
+          key: `${l.key}-${k.key}`,
+          kind: 'child',
+          d: `M ${k.x} ${busY} L ${k.x} ${childTop}`,
+          dashed: true,
+          familyId: l.familyId,
+        })
       continue
     }
     for (const k of kids) {

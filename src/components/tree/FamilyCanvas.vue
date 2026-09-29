@@ -1,6 +1,5 @@
-<script setup lang="ts">
+<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { LayoutResult, LNode } from '@/utils/layout'
 import PersonCard from './PersonCard.vue'
 import AddRelativeOverlay from './AddRelativeOverlay.vue'
 import CanvasControls from './CanvasControls.vue'
@@ -9,12 +8,12 @@ import { useUiStore } from '@/stores/ui'
 import { usePhotoUpload } from '@/composables/usePhoto'
 import { FAMILY_STATUSES } from '@/utils/person'
 
-const props = defineProps<{ layout: LayoutResult }>()
+const props = defineProps({ layout: { type: Object, required: true } })
 const store = useTreeStore()
 const ui = useUiStore()
 const { upload } = usePhotoUpload()
 
-const root = ref<HTMLDivElement>()
+const root = ref()
 const tx = ref(0)
 const ty = ref(0)
 const k = ref(1)
@@ -23,18 +22,18 @@ const MIN_K = 0.15
 const MAX_K = 2.2
 
 const size = ref({ w: 800, h: 600 })
-let ro: ResizeObserver | undefined
+let ro
 
 // ------------------------------------------------------------------ view helpers
-function animate(fn: () => void, ms = 450) {
+function animate(fn, ms = 450) {
   animating.value = true
   fn()
   clearTimeout(animTimer)
   animTimer = setTimeout(() => (animating.value = false), ms)
 }
-let animTimer: ReturnType<typeof setTimeout> | undefined
+let animTimer
 
-function centerOn(x: number, y: number, scale = k.value, smooth = true) {
+function centerOn(x, y, scale = k.value, smooth = true) {
   const apply = () => {
     k.value = scale
     tx.value = size.value.w / 2 - x * scale
@@ -43,7 +42,7 @@ function centerOn(x: number, y: number, scale = k.value, smooth = true) {
   smooth ? animate(apply) : apply()
 }
 
-function nodeCenter(n: LNode) {
+function nodeCenter(n) {
   return { x: n.x, y: (n.top ?? 0) + n.h / 2 }
 }
 
@@ -64,7 +63,7 @@ function fit(smooth = true) {
   centerOn((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, scale, smooth)
 }
 
-function zoomAt(factor: number, px = size.value.w / 2, py = size.value.h / 2, smooth = false) {
+function zoomAt(factor, px = size.value.w / 2, py = size.value.h / 2, smooth = false) {
   const nk = Math.min(MAX_K, Math.max(MIN_K, k.value * factor))
   const apply = () => {
     tx.value = px - ((px - tx.value) * nk) / k.value
@@ -75,18 +74,18 @@ function zoomAt(factor: number, px = size.value.w / 2, py = size.value.h / 2, sm
 }
 
 // ------------------------------------------------------------------ pan / pinch
-const pointers = new Map<number, { x: number; y: number }>()
-let panStart: { x: number; y: number; tx: number; ty: number } | null = null
-let pinchStart: { d: number; k: number; cx: number; cy: number; tx: number; ty: number } | null = null
+const pointers = new Map()
+let panStart = null
+let pinchStart = null
 const dragging = ref(false)
 let moved = false
 
-function local(e: PointerEvent | WheelEvent) {
-  const r = root.value!.getBoundingClientRect()
+function local(e) {
+  const r = root.value.getBoundingClientRect()
   return { x: e.clientX - r.left, y: e.clientY - r.top }
 }
 
-function onPointerDown(e: PointerEvent) {
+function onPointerDown(e) {
   if (e.button !== 0 && e.pointerType === 'mouse') return
   const p = local(e)
   pointers.set(e.pointerId, p)
@@ -107,7 +106,7 @@ function onPointerDown(e: PointerEvent) {
   }
 }
 
-function onPointerMove(e: PointerEvent) {
+function onPointerMove(e) {
   if (!pointers.has(e.pointerId)) return
   const p = local(e)
   pointers.set(e.pointerId, p)
@@ -135,7 +134,7 @@ function onPointerMove(e: PointerEvent) {
   }
 }
 
-function onPointerUp(e: PointerEvent) {
+function onPointerUp(e) {
   pointers.delete(e.pointerId)
   if (pointers.size < 2) pinchStart = null
   if (pointers.size === 0) {
@@ -148,7 +147,7 @@ function onClickBackground() {
   if (moved) return
 }
 
-function onWheel(e: WheelEvent) {
+function onWheel(e) {
   e.preventDefault()
   const p = local(e)
   const isTrackpadPan = !e.ctrlKey && e.deltaMode === 0 && (Math.abs(e.deltaX) > 0.5 || Math.abs(e.deltaY) < 40)
@@ -163,13 +162,13 @@ function onWheel(e: WheelEvent) {
 }
 
 // ------------------------------------------------------------------ keyboard
-function onKey(e: KeyboardEvent) {
-  const tag = (e.target as HTMLElement)?.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+function onKey(e) {
+  const tag = e.target?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return
   if (document.querySelector('.q-dialog')) return
   if (e.key === '+' || e.key === '=') zoomAt(1.2, undefined, undefined, true)
   else if (e.key === '-' || e.key === '_') zoomAt(1 / 1.2, undefined, undefined, true)
-  else if (e.key === '0') centerOn(nodeCenter(props.layout.focusNode!).x, nodeCenter(props.layout.focusNode!).y, 1)
+  else if (e.key === '0') centerOn(nodeCenter(props.layout.focusNode).x, nodeCenter(props.layout.focusNode).y, 1)
   else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey) fit()
   else if (e.key === 'ArrowLeft') tx.value += 80
   else if (e.key === 'ArrowRight') tx.value -= 80
@@ -189,7 +188,7 @@ onMounted(() => {
       centerFocus(false)
     }
   })
-  ro.observe(root.value!)
+  ro.observe(root.value)
   window.addEventListener('keydown', onKey)
 })
 onBeforeUnmount(() => {
@@ -221,24 +220,24 @@ const overlayNode = computed(() => {
 })
 const overlayScale = computed(() => Math.min(1, (size.value.w - 16) / 920, (size.value.h - 16) / 420))
 
-function openAdd(n: LNode) {
+function openAdd(n) {
   const c = nodeCenter(n)
   if (size.value.w >= 640) centerOn(c.x, c.y, k.value, true)
-  ui.addOverlayFor = n.personId!
+  ui.addOverlayFor = n.personId
 }
 
 // ------------------------------------------------------------------ cards
-function onSelect(n: LNode) {
+function onSelect(n) {
   if (moved) return
-  store.select(n.personId!)
+  store.select(n.personId)
   if (!store.ui.panelOpen && window.innerWidth >= 1024) store.ui.panelOpen = true
 }
-function onExpand(n: LNode) {
-  store.setFocus(n.personId!)
+function onExpand(n) {
+  store.setFocus(n.personId)
 }
 
-const statusIcon = (s?: string) => FAMILY_STATUSES.find((x) => x.value === s)?.icon ?? 'sym_r_favorite'
-const statusLabel = (s?: string) => FAMILY_STATUSES.find((x) => x.value === s)?.label ?? ''
+const statusIcon = (s) => FAMILY_STATUSES.find((x) => x.value === s)?.icon ?? 'sym_r_favorite'
+const statusLabel = (s) => FAMILY_STATUSES.find((x) => x.value === s)?.label ?? ''
 
 const worldStyle = computed(() => ({
   transform: `translate(${tx.value}px, ${ty.value}px) scale(${k.value})`,
@@ -315,7 +314,7 @@ function goHome() {
       >
         <PersonCard
           v-if="n.kind === 'person' && store.person(n.personId)"
-          :person="store.person(n.personId)!"
+          :person="store.person(n.personId)"
           :selected="store.selectedId === n.personId"
           :focus="n.focus"
           :home="store.homeId === n.personId"
@@ -323,17 +322,17 @@ function goHome() {
           :more-down="n.moreDown"
           :dup="n.dup"
           @select="onSelect(n)"
-          @open="store.setFocus(n.personId!)"
-          @edit="ui.editPerson(n.personId!)"
+          @open="store.setFocus(n.personId)"
+          @edit="ui.editPerson(n.personId)"
           @add="openAdd(n)"
-          @camera="upload(n.personId!, { avatar: true })"
+          @camera="upload(n.personId, { avatar: true })"
           @expand="onExpand(n)"
         />
         <button
           v-else-if="n.kind === 'placeholder'"
           class="fc__ph"
           :class="n.role === 'father' ? 'gender-M' : 'gender-F'"
-          @click.stop="!moved && ui.addRelative(n.forId!, n.role!)"
+          @click.stop="!moved && ui.addRelative(n.forId, n.role)"
         >
           <q-icon name="sym_r_add" size="18px" />
           <span>Добавить<br />{{ n.role === 'father' ? 'отца' : 'мать' }}</span>
@@ -343,7 +342,7 @@ function goHome() {
 
     <AddRelativeOverlay
       v-if="overlayNode"
-      :person-id="overlayNode.personId!"
+      :person-id="overlayNode.personId"
       :x="size.w / 2"
       :y="size.h / 2"
       :scale="overlayScale"

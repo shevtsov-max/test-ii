@@ -11,7 +11,7 @@ const walk = (dir) => {
   for (const f of readdirSync(dir)) {
     const p = join(dir, f)
     if (statSync(p).isDirectory()) walk(p)
-    else if (/\.(vue|ts)$/.test(f) && !f.includes('icons.generated')) {
+    else if (/\.(vue|js)$/.test(f) && !f.includes('icons.generated')) {
       for (const m of readFileSync(p, 'utf8').matchAll(/sym_r_([a-z0-9_]+)/g)) names.add(m[1])
     }
   }
@@ -29,9 +29,9 @@ import {
 ${ok.map((n) => `  ${camel(n)},`).join('\n')}
 } from '@quasar/extras/material-symbols-rounded'
 
-export const ICONS: Record<string, string> = {
+export const ICONS = {
 ${ok.map((n) => `  sym_r_${n}: ${camel(n)},`).join('\n')}
 }
 `
-writeFileSync(join(root, 'icons.generated.ts'), out)
+writeFileSync(join(root, 'icons.generated.js'), out)
 console.log(`[icons] ${ok.length} иконок`)

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import ViewToolbar from './ViewToolbar.vue'
 import PersonCard from '@/components/tree/PersonCard.vue'
@@ -18,40 +18,30 @@ const MAX = 5
 
 const gens = computed(() => Math.min(store.ui.generations, MAX))
 
-interface Slot {
-  key: string
-  gen: number
-  idx: number
-  personId?: string
-  placeholder?: { forId: string; role: 'father' | 'mother' }
-  x: number
-  y: number
-}
-
 const layout = computed(() => {
   const focus = store.focusId
-  if (!focus) return { slots: [] as Slot[], links: [] as string[], w: 0, h: 0 }
+  if (!focus) return { slots: [], links: [], w: 0, h: 0 }
   const leaves = 2 ** gens.value
   const H = Math.max(leaves * (CH + GAP_Y), 400)
-  const slots: Slot[] = []
-  const links: string[] = []
-  const byKey = new Map<string, Slot>()
+  const slots = []
+  const links = []
+  const byKey = new Map()
 
-  const place = (gen: number, idx: number): { x: number; y: number } => {
+  const place = (gen, idx) => {
     const count = 2 ** gen
     const band = H / count
     return { x: gen * (CW + GAP_X), y: band * idx + band / 2 - CH / 2 }
   }
 
-  const walk = (pid: string, gen: number, idx: number) => {
+  const walk = (pid, gen, idx) => {
     const pos = place(gen, idx)
-    const s: Slot = { key: `${gen}-${idx}`, gen, idx, personId: pid, ...pos }
+    const s = { key: `${gen}-${idx}`, gen, idx, personId: pid, ...pos }
     slots.push(s)
     byKey.set(s.key, s)
     if (gen >= gens.value) return
     const { father, mother, family } = store.parentsOf(pid)
     const full = (family?.partners.length ?? 0) >= 2
-    const parents: [string | undefined, 'father' | 'mother', number][] = [
+    const parents = [
       [father, 'father', idx * 2],
       [mother, 'mother', idx * 2 + 1],
     ]
@@ -59,7 +49,7 @@ const layout = computed(() => {
       const pp = place(gen + 1, pidx)
       if (par) walk(par, gen + 1, pidx)
       else if (!full) {
-        const ph: Slot = { key: `${gen + 1}-${pidx}`, gen: gen + 1, idx: pidx, placeholder: { forId: pid, role }, ...pp }
+        const ph = { key: `${gen + 1}-${pidx}`, gen: gen + 1, idx: pidx, placeholder: { forId: pid, role }, ...pp }
         slots.push(ph)
       } else continue
       // связь
@@ -82,20 +72,23 @@ const layout = computed(() => {
 // Потомки центральной персоны — слева, компактным списком
 const children = computed(() => (store.focusId ? store.childrenOf(store.focusId) : []))
 
-function openAdd(id: string) {
+function openAdd(id) {
   store.setFocus(id)
   store.ui.view = 'family'
   setTimeout(() => (ui.addOverlayFor = id), 350)
 }
 
-const scroller = ref<HTMLDivElement>()
+const scroller = ref()
 function centerFocus() {
   const el = scroller.value
   if (!el) return
   el.scrollTo({ top: (layout.value.h - el.clientHeight) / 2 + 40, left: 0, behavior: 'smooth' })
 }
 onMounted(() => nextTick(centerFocus))
-watch(() => store.focusId, () => nextTick(centerFocus))
+watch(
+  () => store.focusId,
+  () => nextTick(centerFocus),
+)
 </script>
 
 <template>
@@ -122,15 +115,15 @@ watch(() => store.focusId, () => nextTick(centerFocus))
           >
             <PersonCard
               v-if="s.personId && store.person(s.personId)"
-              :person="store.person(s.personId)!"
+              :person="store.person(s.personId)"
               :selected="store.selectedId === s.personId"
               :focus="s.gen === 0"
               :home="store.homeId === s.personId"
-              @select="store.select(s.personId!)"
-              @open="store.setFocus(s.personId!)"
-              @edit="ui.editPerson(s.personId!)"
-              @add="openAdd(s.personId!)"
-              @camera="upload(s.personId!, { avatar: true })"
+              @select="store.select(s.personId)"
+              @open="store.setFocus(s.personId)"
+              @edit="ui.editPerson(s.personId)"
+              @add="openAdd(s.personId)"
+              @camera="upload(s.personId, { avatar: true })"
             />
             <button
               v-else-if="s.placeholder"

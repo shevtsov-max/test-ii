@@ -1,13 +1,9 @@
-<script setup lang="ts">
-defineProps<{ zoom: number; fullscreen: boolean }>()
-const emit = defineEmits<{
-  'zoom-in': []
-  'zoom-out': []
-  fit: []
-  home: []
-  center: []
-  fullscreen: []
-}>()
+<script setup>
+defineProps({
+  zoom: { type: Number, required: true },
+  fullscreen: { type: Boolean, required: true },
+})
+const emit = defineEmits(['zoom-in', 'zoom-out', 'fit', 'home', 'center', 'fullscreen'])
 </script>
 
 <template>

@@ -1,23 +1,20 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref } from 'vue'
 import PersonAvatar from './PersonAvatar.vue'
 import { useTreeStore } from '@/stores/tree'
 import { lifeSpan, shortName, fullName } from '@/utils/person'
 
-const props = withDefaults(
-  defineProps<{
-    modelValue?: string | null
-    label?: string
-    placeholder?: string
-    exclude?: string[]
-    dense?: boolean
-    clearable?: boolean
-    autofocus?: boolean
-    rounded?: boolean
-  }>(),
-  { exclude: () => [], placeholder: 'Поиск персоны…' },
-)
-const emit = defineEmits<{ 'update:modelValue': [string | null]; pick: [string] }>()
+const props = defineProps({
+  modelValue: { type: String, default: null },
+  label: String,
+  placeholder: { type: String, default: 'Поиск персоны…' },
+  exclude: { type: Array, default: () => [] },
+  dense: Boolean,
+  clearable: Boolean,
+  autofocus: Boolean,
+  rounded: Boolean,
+})
+const emit = defineEmits(['update:modelValue', 'pick'])
 const store = useTreeStore()
 const needle = ref('')
 
@@ -33,7 +30,7 @@ const all = computed(() =>
 )
 const options = ref(all.value)
 
-function filter(val: string, update: (fn: () => void) => void) {
+function filter(val, update) {
   update(() => {
     needle.value = val.toLowerCase().trim()
     const parts = needle.value.split(/\s+/).filter(Boolean)
@@ -41,7 +38,7 @@ function filter(val: string, update: (fn: () => void) => void) {
   })
 }
 
-function onUpdate(v: string | null) {
+function onUpdate(v) {
   emit('update:modelValue', v)
   if (v) emit('pick', v)
 }
@@ -82,7 +79,7 @@ function onUpdate(v: string | null) {
         <q-item-section>
           <q-item-label>{{ scope.opt.label }}</q-item-label>
           <q-item-label caption>
-            {{ lifeSpan(store.person(scope.opt.value)!) }}
+            {{ lifeSpan(store.person(scope.opt.value)) }}
             <template v-if="store.homeId && store.relationToHome(scope.opt.value)">
               · {{ store.relationToHome(scope.opt.value) }}
             </template>

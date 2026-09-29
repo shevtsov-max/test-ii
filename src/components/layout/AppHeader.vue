@@ -1,16 +1,15 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useTreeStore } from '@/stores/tree'
 import { useUiStore } from '@/stores/ui'
 import { shortName } from '@/utils/person'
-import type { ViewMode } from '@/types'
 
 const $q = useQuasar()
 const store = useTreeStore()
 const ui = useUiStore()
 
-const views: { value: ViewMode; label: string; icon: string }[] = [
+const views = [
   { value: 'family', label: 'Семейное древо', icon: 'sym_r_account_tree' },
   { value: 'pedigree', label: 'Родословная', icon: 'sym_r_family_history' },
   { value: 'fan', label: 'Веер', icon: 'sym_r_motion_photos_auto' },
@@ -19,7 +18,7 @@ const views: { value: ViewMode; label: string; icon: string }[] = [
 
 const view = computed({
   get: () => store.ui.view,
-  set: (v: ViewMode) => (store.ui.view = v),
+  set: (v) => (store.ui.view = v),
 })
 
 function rename() {
@@ -28,7 +27,7 @@ function rename() {
     prompt: { model: store.tree.name, type: 'text', outlined: true },
     cancel: { flat: true, label: 'Отмена' },
     ok: { unelevated: true, label: 'Сохранить', color: 'primary' },
-  }).onOk((v: string) => v.trim() && store.renameTree(v.trim()))
+  }).onOk((v) => v.trim() && store.renameTree(v.trim()))
 }
 </script>
 

@@ -1,21 +1,20 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
-import type { GDate } from '@/types'
 import { MONTHS, QUALIFIERS } from '@/utils/person'
 
-const model = defineModel<GDate>({ required: true })
-defineProps<{ label?: string }>()
+const model = defineModel({ type: Object, required: true })
+defineProps({ label: String })
 
 const days = [{ label: 'День', value: null }, ...Array.from({ length: 31 }, (_, i) => ({ label: String(i + 1), value: i + 1 }))]
 const months = [{ label: 'Месяц', value: null }, ...MONTHS.map((m, i) => ({ label: m, value: i + 1 }))]
 const qualifiers = QUALIFIERS.map((q) => ({ label: q.label, value: q.value }))
 const between = computed(() => model.value.qualifier === 'between')
 
-function setYear(key: 'year' | 'year2', v: string | number | null) {
+function setYear(key, v) {
   const n = v === null || v === '' ? null : Number(v)
-  model.value = { ...model.value, [key]: Number.isFinite(n as number) ? n : null }
+  model.value = { ...model.value, [key]: Number.isFinite(n) ? n : null }
 }
-function set<K extends keyof GDate>(key: K, v: GDate[K]) {
+function set(key, v) {
   model.value = { ...model.value, [key]: v }
 }
 </script>

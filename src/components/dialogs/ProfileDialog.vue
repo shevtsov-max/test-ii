@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import PersonAvatar from '@/components/common/PersonAvatar.vue'
@@ -53,24 +53,24 @@ function saveExtra() {
 }
 
 // Фото
-const viewer = ref<{ open: boolean; index: number }>({ open: false, index: 0 })
-function openViewer(i: number) {
+const viewer = ref({ open: false, index: 0 })
+function openViewer(i) {
   viewer.value = { open: true, index: i }
 }
-function editCaption(photoId: string, caption: string) {
+function editCaption(photoId, caption) {
   $q.dialog({
     title: 'Подпись к фото',
     prompt: { model: caption, type: 'text', outlined: true },
     cancel: { flat: true, label: 'Отмена' },
     ok: { unelevated: true, label: 'Сохранить', color: 'primary' },
-  }).onOk((v: string) => store.updatePhoto(p.value!.id, photoId, v))
+  }).onOk((v) => store.updatePhoto(p.value.id, photoId, v))
 }
-function removePhoto(photoId: string) {
+function removePhoto(photoId) {
   $q.dialog({
     title: 'Удалить фото?',
     cancel: { flat: true, label: 'Отмена' },
     ok: { unelevated: true, label: 'Удалить', color: 'negative' },
-  }).onOk(() => store.removePhoto(p.value!.id, photoId))
+  }).onOk(() => store.removePhoto(p.value.id, photoId))
 }
 
 // Родственники
@@ -83,7 +83,7 @@ const relGroups = computed(() => {
     {
       title: 'Родители',
       icon: 'sym_r_supervisor_account',
-      items: [par.father, par.mother].filter(Boolean).map((id) => ({ id: id!, familyId: par.family?.id })),
+      items: [par.father, par.mother].filter(Boolean).map((id) => ({ id: id, familyId: par.family?.id })),
       empty: 'Родители не указаны',
     },
     {
@@ -104,30 +104,25 @@ const relGroups = computed(() => {
       items: store.childrenOf(x.id).map((id) => ({ id })),
       empty: 'Нет детей',
     },
-  ] as {
-    title: string
-    icon: string
-    items: { id: string; familyId?: string; status?: string; half?: boolean }[]
-    empty: string
-  }[]
+  ]
 })
 
-function goTo(id: string) {
+function goTo(id) {
   store.select(id)
   ui.profile.personId = id
 }
-function statusLabel(s?: string) {
+function statusLabel(s) {
   return FAMILY_STATUSES.find((x) => x.value === s)?.label
 }
-function removePartnership(familyId: string, partnerId: string) {
+function removePartnership(familyId, partnerId) {
   $q.dialog({
     title: 'Удалить связь?',
     message: `Связь «партнёры» с ${shortName(store.person(partnerId))} будет удалена. Общие дети останутся с ${shortName(p.value)}.`,
     cancel: { flat: true, label: 'Отмена' },
     ok: { unelevated: true, label: 'Удалить связь', color: 'negative' },
-  }).onOk(() => store.removePartnership(familyId, p.value!.id))
+  }).onOk(() => store.removePartnership(familyId, p.value.id))
 }
-function removeChild(childId: string) {
+function removeChild(childId) {
   $q.dialog({
     title: 'Отвязать ребёнка?',
     message: `${shortName(store.person(childId))} больше не будет связан(а) с родителями.`,
@@ -136,9 +131,9 @@ function removeChild(childId: string) {
   }).onOk(() => store.detachChild(childId))
 }
 
-const factLabel = (type: string, title?: string) =>
+const factLabel = (type, title) =>
   type === 'custom' ? title || 'Событие' : (FACT_TYPES.find((f) => f.value === type)?.label ?? type)
-const factIcon = (type: string) => FACT_TYPES.find((f) => f.value === type)?.icon ?? 'sym_r_event'
+const factIcon = (type) => FACT_TYPES.find((f) => f.value === type)?.icon ?? 'sym_r_event'
 </script>
 
 <template>
@@ -349,7 +344,7 @@ const factIcon = (type: string) => FACT_TYPES.find((f) => f.value === type)?.ico
                   <q-item-section>
                     <q-item-label>{{ fullName(store.person(r.id)) }}</q-item-label>
                     <q-item-label caption>
-                      {{ [lifeSpan(store.person(r.id)!), r.status && statusLabel(r.status), r.half && 'сводный(ая)'].filter(Boolean).join(' · ') }}
+                      {{ [lifeSpan(store.person(r.id)), r.status && statusLabel(r.status), r.half && 'сводный(ая)'].filter(Boolean).join(' · ') }}
                     </q-item-label>
                   </q-item-section>
                   <q-item-section side>

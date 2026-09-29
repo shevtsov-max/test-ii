@@ -53,13 +53,13 @@ npm run preview    # посмотреть собранную версию
 
 ```
 src/
-  types.ts                  модель: Person, Family, GDate…
-  stores/tree.ts            Pinia: данные, история, все операции над древом
-  stores/ui.ts              состояние диалогов
-  utils/layout.ts           алгоритм раскладки семейного вида
-  utils/graph.ts            родители/дети/братья, расчёт родства по-русски
-  utils/gedcom.ts           импорт/экспорт GEDCOM
-  utils/names.ts            отчества и род фамилий
+  types.js                  модель данных (JSDoc-typedef): Person, Family, GDate…
+  stores/tree.js            Pinia: данные, история, все операции над древом
+  stores/ui.js              состояние диалогов
+  utils/layout.js           алгоритм раскладки семейного вида
+  utils/graph.js            родители/дети/братья, расчёт родства по-русски
+  utils/gedcom.js           импорт/экспорт GEDCOM
+  utils/names.js            отчества и род фамилий
   components/tree/          холст, карточка, оверлей «+», элементы управления
   components/views/         семейный вид, родословная, веер, список
   components/dialogs/       формы персоны, профиль, отношения, факты, данные, справка
@@ -69,5 +69,5 @@ src/
 Иконки — Material Symbols в виде SVG (скрипт `scripts/gen-icons.mjs` собирает только
 используемые, запускается автоматически перед `dev`/`build`).
 
-Для подключения бэкенда достаточно заменить сохранение в `stores/tree.ts` (watch → localStorage)
+Для подключения бэкенда достаточно заменить сохранение в `stores/tree.js` (watch → localStorage)
 на запросы к API — все изменения проходят через действия стора.

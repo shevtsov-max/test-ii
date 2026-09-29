@@ -1,16 +1,15 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
-import type { RelativeKind } from '@/types'
 import PersonAvatar from './PersonAvatar.vue'
 import { useTreeStore } from '@/stores/tree'
 import { useUiStore } from '@/stores/ui'
 
-const props = defineProps<{ personId: string }>()
+const props = defineProps({ personId: { type: String, required: true } })
 const store = useTreeStore()
 const ui = useUiStore()
 const can = computed(() => store.canAdd(props.personId))
 
-const items: { kind: RelativeKind; label: string; g: 'M' | 'F' | 'U' }[] = [
+const items = [
   { kind: 'father', label: 'Отца', g: 'M' },
   { kind: 'mother', label: 'Мать', g: 'F' },
   { kind: 'brother', label: 'Брата', g: 'M' },

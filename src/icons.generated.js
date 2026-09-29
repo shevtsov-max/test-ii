@@ -79,7 +79,7 @@ import {
   symRoundedWorkspacePremium,
 } from '@quasar/extras/material-symbols-rounded'
 
-export const ICONS: Record<string, string> = {
+export const ICONS = {
   sym_r_account_circle: symRoundedAccountCircle,
   sym_r_account_tree: symRoundedAccountTree,
   sym_r_add: symRoundedAdd,

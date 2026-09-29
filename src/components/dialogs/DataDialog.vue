@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useTreeStore } from '@/stores/tree'
@@ -27,9 +27,7 @@ const stats = computed(() => {
 })
 
 const slug = () =>
-  (store.tree.name || 'tree').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '') +
-  '_' +
-  new Date().toISOString().slice(0, 10)
+  (store.tree.name || 'tree').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '') + '_' + new Date().toISOString().slice(0, 10)
 
 function exportJson() {
   downloadText(`${slug()}.json`, JSON.stringify(store.tree, null, 2))
@@ -38,7 +36,7 @@ function exportGed() {
   downloadText(`${slug()}.ged`, exportGedcom(store.tree), 'text/plain')
 }
 
-function confirmReplace(msg: string, fn: () => void) {
+function confirmReplace(msg, fn) {
   $q.dialog({
     title: 'Заменить текущее древо?',
     message: msg + ' Текущие данные можно вернуть кнопкой «Отменить» (Ctrl+Z), но лучше сначала сохранить резервную копию.',
@@ -63,7 +61,7 @@ async function importFile() {
       },
     )
   } catch (e) {
-    $q.notify({ type: 'negative', message: 'Ошибка импорта: ' + (e as Error).message })
+    $q.notify({ type: 'negative', message: 'Ошибка импорта: ' + e.message })
   }
 }
 

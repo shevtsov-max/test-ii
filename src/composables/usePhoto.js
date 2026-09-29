@@ -6,7 +6,7 @@ export function usePhotoUpload() {
   const $q = useQuasar()
   const store = useTreeStore()
 
-  async function upload(personId: string, opts: { avatar?: boolean; multiple?: boolean } = {}) {
+  async function upload(personId, opts = {}) {
     const files = await pickFile('image/*', !!opts.multiple)
     if (!files.length) return
     try {
@@ -16,7 +16,7 @@ export function usePhotoUpload() {
       }
       $q.notify({ type: 'positive', message: files.length > 1 ? `Добавлено фото: ${files.length}` : 'Фото добавлено' })
     } catch (e) {
-      $q.notify({ type: 'negative', message: (e as Error).message })
+      $q.notify({ type: 'negative', message: e.message })
     }
   }
   return { upload }

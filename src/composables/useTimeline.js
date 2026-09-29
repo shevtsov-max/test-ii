@@ -1,28 +1,17 @@
-import { computed, type Ref } from 'vue'
-import type { Person } from '@/types'
+import { computed } from 'vue'
 import { useTreeStore } from '@/stores/tree'
 import { useUiStore } from '@/stores/ui'
 import { FACT_TYPES, FAMILY_STATUSES, formatDate, hasDate, shortName, sortKey } from '@/utils/person'
 
-export interface TimelineItem {
-  key: string
-  year: number | null
-  sort: number
-  title: string
-  subtitle: string
-  icon: string
-  onClick: () => void
-}
-
-export function usePersonTimeline(person: Ref<Person | undefined | null>) {
+export function usePersonTimeline(person) {
   const store = useTreeStore()
   const ui = useUiStore()
 
-  return computed<TimelineItem[]>(() => {
+  return computed(() => {
     const p = person.value
     if (!p) return []
-    const out: TimelineItem[] = []
-    const sub = (d: string, place: string) => [d, place].filter(Boolean).join(' · ')
+    const out = []
+    const sub = (d, place) => [d, place].filter(Boolean).join(' · ')
 
     out.push({
       key: 'birth',

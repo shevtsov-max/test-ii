@@ -1,7 +1,5 @@
-import type { Gender } from '@/types'
-
 /** Приводит русскую фамилию к нужному роду: Шевцов ↔ Шевцова, Бельский ↔ Бельская. */
-export function surnameFor(surname: string, g: Gender): string {
+export function surnameFor(surname, g) {
   const s = surname.trim()
   if (!s || g === 'U') return s
   if (g === 'F') {
@@ -14,7 +12,7 @@ export function surnameFor(surname: string, g: Gender): string {
   return s
 }
 
-const SPECIAL: Record<string, [string, string]> = {
+const SPECIAL = {
   илья: ['Ильич', 'Ильинична'],
   пётр: ['Петрович', 'Петровна'],
   петр: ['Петрович', 'Петровна'],
@@ -27,7 +25,7 @@ const SPECIAL: Record<string, [string, string]> = {
 }
 
 /** Отчество по имени отца. */
-export function patronymicFrom(fatherName: string, g: Gender): string {
+export function patronymicFrom(fatherName, g) {
   const n = fatherName.trim()
   if (!n || g === 'U') return ''
   const fem = g === 'F'
@@ -46,7 +44,7 @@ export function patronymicFrom(fatherName: string, g: Gender): string {
 }
 
 /** Сестра Сергеевича — Сергеевна. */
-export function patronymicSwap(patr: string, g: Gender): string {
+export function patronymicSwap(patr, g) {
   const p = patr.trim()
   if (!p || g === 'U') return p
   if (g === 'F') {

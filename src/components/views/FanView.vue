@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref } from 'vue'
 import ViewToolbar from './ViewToolbar.vue'
 import PersonAvatar from '@/components/common/PersonAvatar.vue'
@@ -14,31 +14,17 @@ const gens = computed(() => Math.min(Math.max(store.ui.generations, 2), MAX))
 const SPAN = 240 // градусов
 const START = -90 - SPAN / 2
 const R0 = 92
-const ringW = (g: number) => (g <= 2 ? 96 : g <= 4 ? 82 : 70)
-const inner = (g: number) => {
+const ringW = (g) => (g <= 2 ? 96 : g <= 4 ? 82 : 70)
+const inner = (g) => {
   let r = R0
   for (let i = 1; i < g; i++) r += ringW(i)
   return r
 }
 
-interface Sector {
-  key: string
-  gen: number
-  idx: number
-  personId?: string
-  forId?: string
-  role?: 'father' | 'mother'
-  d: string
-  a0: number
-  a1: number
-  r0: number
-  r1: number
-}
+const rad = (a) => (a * Math.PI) / 180
+const pt = (r, a) => [r * Math.cos(rad(a)), r * Math.sin(rad(a))]
 
-const rad = (a: number) => (a * Math.PI) / 180
-const pt = (r: number, a: number) => [r * Math.cos(rad(a)), r * Math.sin(rad(a))]
-
-function arcPath(r0: number, r1: number, a0: number, a1: number) {
+function arcPath(r0, r1, a0, a1) {
   const large = a1 - a0 > 180 ? 1 : 0
   const [x0, y0] = pt(r1, a0)
   const [x1, y1] = pt(r1, a1)
@@ -48,14 +34,14 @@ function arcPath(r0: number, r1: number, a0: number, a1: number) {
 }
 
 const sectors = computed(() => {
-  const out: Sector[] = []
+  const out = []
   const focus = store.focusId
   if (!focus) return out
-  const walk = (pid: string, gen: number, idx: number) => {
+  const walk = (pid, gen, idx) => {
     if (gen >= gens.value) return
     const { father, mother, family } = store.parentsOf(pid)
     const full = (family?.partners.length ?? 0) >= 2
-    const parents: [string | undefined, 'father' | 'mother'][] = [
+    const parents = [
       [father, 'father'],
       [mother, 'mother'],
     ]
@@ -95,13 +81,13 @@ const viewBox = computed(() => {
   return `${-R} ${-R} ${R * 2} ${R + bottom}`
 })
 
-function labelFor(s: Sector) {
+function labelFor(s) {
   const p = store.person(s.personId)
   if (!p) return null
   const mid = (s.a0 + s.a1) / 2
   const rMid = (s.r0 + s.r1) / 2
   const angSize = s.a1 - s.a0
-  const arcLen = (rad(angSize) * rMid)
+  const arcLen = rad(angSize) * rMid
   // радиальный текст для узких секторов
   const radial = arcLen < 90
   const [x, y] = pt(rMid, mid)
@@ -111,7 +97,7 @@ function labelFor(s: Sector) {
   const width = radial ? s.r1 - s.r0 - 8 : arcLen - 10
   const size = s.gen <= 1 ? 13 : s.gen <= 3 ? 11.5 : 10
   const maxChars = Math.max(3, Math.floor(width / (size * 0.56)))
-  const cut = (t: string) => (t.length > maxChars ? t.slice(0, maxChars - 1) + '…' : t)
+  const cut = (t) => (t.length > maxChars ? t.slice(0, maxChars - 1) + '…' : t)
   return {
     x,
     y,
@@ -123,9 +109,9 @@ function labelFor(s: Sector) {
   }
 }
 
-const hover = ref<string | null>(null)
+const hover = ref(null)
 const focusPerson = computed(() => store.focus)
-function onClick(s: Sector) {
+function onClick(s) {
   if (s.personId) store.select(s.personId)
   else if (s.forId && s.role) ui.addRelative(s.forId, s.role)
 }
@@ -148,16 +134,16 @@ function onClick(s: Sector) {
           <template v-if="s.personId">
             <text
               v-if="labelFor(s)"
-              :transform="`translate(${labelFor(s)!.x} ${labelFor(s)!.y}) rotate(${labelFor(s)!.rot})`"
+              :transform="`translate(${labelFor(s).x} ${labelFor(s).y}) rotate(${labelFor(s).rot})`"
               text-anchor="middle"
-              :font-size="labelFor(s)!.size"
+              :font-size="labelFor(s).size"
               class="fan__text"
             >
-              <tspan x="0" :dy="labelFor(s)!.years ? '-0.6em' : '-0.1em'" font-weight="700">{{ labelFor(s)!.first }}</tspan>
-              <tspan x="0" dy="1.15em">{{ labelFor(s)!.last }}</tspan>
-              <tspan v-if="labelFor(s)!.years" x="0" dy="1.15em" class="fan__years">{{ labelFor(s)!.years }}</tspan>
+              <tspan x="0" :dy="labelFor(s).years ? '-0.6em' : '-0.1em'" font-weight="700">{{ labelFor(s).first }}</tspan>
+              <tspan x="0" dy="1.15em">{{ labelFor(s).last }}</tspan>
+              <tspan v-if="labelFor(s).years" x="0" dy="1.15em" class="fan__years">{{ labelFor(s).years }}</tspan>
             </text>
-            <title>{{ shortName(store.person(s.personId)) }} · {{ lifeSpan(store.person(s.personId)!) }}</title>
+            <title>{{ shortName(store.person(s.personId)) }} · {{ lifeSpan(store.person(s.personId)) }}</title>
           </template>
           <template v-else>
             <text

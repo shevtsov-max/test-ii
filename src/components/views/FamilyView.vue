@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
 import FamilyCanvas from '@/components/tree/FamilyCanvas.vue'
 import ViewToolbar from './ViewToolbar.vue'

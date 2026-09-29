@@ -1,27 +1,19 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
-import type { Person } from '@/types'
 import PersonAvatar from '@/components/common/PersonAvatar.vue'
 import { lifeSpan, shortName } from '@/utils/person'
 import { useTreeStore } from '@/stores/tree'
 
-const props = defineProps<{
-  person: Person
-  selected?: boolean
-  focus?: boolean
-  home?: boolean
-  moreUp?: boolean
-  moreDown?: boolean
-  dup?: boolean
-}>()
-const emit = defineEmits<{
-  select: []
-  open: []
-  edit: []
-  add: []
-  camera: []
-  expand: []
-}>()
+const props = defineProps({
+  person: { type: Object, required: true },
+  selected: Boolean,
+  focus: Boolean,
+  home: Boolean,
+  moreUp: Boolean,
+  moreDown: Boolean,
+  dup: Boolean,
+})
+const emit = defineEmits(['select', 'open', 'edit', 'add', 'camera', 'expand'])
 const store = useTreeStore()
 
 const span = computed(() => lifeSpan(props.person))

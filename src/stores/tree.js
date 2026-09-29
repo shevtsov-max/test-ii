@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import type { Fact, Family, FamilyStatus, Person, RelativeKind, TreeData, ViewMode } from '@/types'
 import { shevtsovTree, demoTree, emptyTree } from '@/data/seed'
 import { romanovTree } from '@/data/romanovs'
 import { newFamily, newPerson, uid } from '@/utils/person'
@@ -10,43 +9,20 @@ const LS_TREE = 'ft:tree:v1'
 const LS_UI = 'ft:ui:v1'
 const HISTORY_LIMIT = 60
 
-function load<T>(key: string): T | null {
+function load(key) {
   try {
     const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T) : null
+    return raw ? JSON.parse(raw) : null
   } catch {
     return null
   }
 }
 
-export interface AddRelativeOptions {
-  /** id семьи, в которую добавить (для детей/братьев) */
-  familyId?: string | null
-  /** 'single' — второй родитель неизвестен */
-  mode?: 'single'
-  status?: FamilyStatus
-  /** Связать с уже существующей персоной вместо создания новой */
-  existingId?: string | null
-}
-
-export interface UiSettings {
-  generations: number
-  placeholders: boolean
-  showPhotos: boolean
-  showYears: boolean
-  showRelation: boolean
-  siblings: boolean
-  compact: boolean
-  dark: boolean
-  panelOpen: boolean
-  view: ViewMode
-}
-
 export const useTreeStore = defineStore('tree', () => {
-  const tree = ref<TreeData>(load<TreeData>(LS_TREE) ?? romanovTree())
-  const savedUi = load<Partial<UiSettings> & { focusId?: string; selectedId?: string }>(LS_UI) ?? {}
+  const tree = ref(load(LS_TREE) ?? romanovTree())
+  const savedUi = load(LS_UI) ?? {}
 
-  const ui = ref<UiSettings>({
+  const ui = ref({
     generations: 4,
     placeholders: true,
     showPhotos: true,
@@ -61,17 +37,13 @@ export const useTreeStore = defineStore('tree', () => {
   })
 
   const firstId = () => tree.value.homePersonId ?? Object.keys(tree.value.persons)[0] ?? null
-  const focusId = ref<string | null>(
-    savedUi.focusId && tree.value.persons[savedUi.focusId] ? savedUi.focusId : firstId(),
-  )
-  const selectedId = ref<string | null>(
-    savedUi.selectedId && tree.value.persons[savedUi.selectedId] ? savedUi.selectedId : focusId.value,
-  )
+  const focusId = ref(savedUi.focusId && tree.value.persons[savedUi.focusId] ? savedUi.focusId : firstId())
+  const selectedId = ref(savedUi.selectedId && tree.value.persons[savedUi.selectedId] ? savedUi.selectedId : focusId.value)
 
   // ---------------------------------------------------------------- persistence
-  let saveTimer: ReturnType<typeof setTimeout> | undefined
-  const lastSaved = ref<number>(Date.now())
-  const saveError = ref<string | null>(null)
+  let saveTimer
+  const lastSaved = ref(Date.now())
+  const saveError = ref(null)
   watch(
     tree,
     () => {
@@ -102,8 +74,8 @@ export const useTreeStore = defineStore('tree', () => {
   )
 
   // ---------------------------------------------------------------- history
-  const past = ref<string[]>([])
-  const future = ref<string[]>([])
+  const past = ref([])
+  const future = ref([])
   const canUndo = computed(() => past.value.length > 0)
   const canRedo = computed(() => future.value.length > 0)
 
@@ -112,7 +84,7 @@ export const useTreeStore = defineStore('tree', () => {
     if (past.value.length > HISTORY_LIMIT) past.value.shift()
     future.value = []
   }
-  function restore(raw: string) {
+  function restore(raw) {
     tree.value = JSON.parse(raw)
     if (!focusId.value || !tree.value.persons[focusId.value]) focusId.value = firstId()
     if (!selectedId.value || !tree.value.persons[selectedId.value]) selectedId.value = focusId.value
@@ -137,16 +109,16 @@ export const useTreeStore = defineStore('tree', () => {
   const selected = computed(() => (selectedId.value ? tree.value.persons[selectedId.value] : undefined))
   const homeId = computed(() => tree.value.homePersonId)
 
-  const person = (id?: string | null) => (id ? tree.value.persons[id] : undefined)
-  const parentsOf = (id: string) => G.parentsOf(tree.value, id)
-  const partnersOf = (id: string) => G.partnersOf(tree.value, id)
-  const childrenOf = (id: string) => G.childrenOf(tree.value, id)
-  const siblingsOf = (id: string) => G.siblingsOf(tree.value, id)
-  const spouseFamilies = (id: string) => G.spouseFamilies(tree.value, id)
-  const relationToHome = (id: string) => G.relationship(tree.value, tree.value.homePersonId, id)
+  const person = (id) => (id ? tree.value.persons[id] : undefined)
+  const parentsOf = (id) => G.parentsOf(tree.value, id)
+  const partnersOf = (id) => G.partnersOf(tree.value, id)
+  const childrenOf = (id) => G.childrenOf(tree.value, id)
+  const siblingsOf = (id) => G.siblingsOf(tree.value, id)
+  const spouseFamilies = (id) => G.spouseFamilies(tree.value, id)
+  const relationToHome = (id) => G.relationship(tree.value, tree.value.homePersonId, id)
 
   const places = computed(() => {
-    const s = new Set<string>()
+    const s = new Set()
     for (const p of persons.value) {
       if (p.birth.place) s.add(p.birth.place)
       if (p.death.place) s.add(p.death.place)
@@ -157,7 +129,7 @@ export const useTreeStore = defineStore('tree', () => {
   })
 
   /** Какие родственники могут быть добавлены */
-  function canAdd(id: string): Record<RelativeKind, boolean> {
+  function canAdd(id) {
     const { father, mother, family } = parentsOf(id)
     const full = (family?.partners.length ?? 0) >= 2
     return {
@@ -172,30 +144,30 @@ export const useTreeStore = defineStore('tree', () => {
   }
 
   // ---------------------------------------------------------------- mutations
-  function touch(p: Person) {
+  function touch(p) {
     p.updatedAt = Date.now()
   }
 
-  function setFocus(id: string, select = true) {
+  function setFocus(id, select = true) {
     if (!tree.value.persons[id]) return
     focusId.value = id
     if (select) selectedId.value = id
   }
-  function select(id: string | null) {
+  function select(id) {
     selectedId.value = id
   }
 
-  function setHome(id: string) {
+  function setHome(id) {
     snapshot()
     tree.value.homePersonId = id
   }
 
-  function renameTree(name: string) {
+  function renameTree(name) {
     snapshot()
     tree.value.name = name
   }
 
-  function updatePerson(id: string, patch: Partial<Person>) {
+  function updatePerson(id, patch) {
     const p = tree.value.persons[id]
     if (!p) return
     snapshot()
@@ -203,7 +175,7 @@ export const useTreeStore = defineStore('tree', () => {
     touch(p)
   }
 
-  function addRelative(targetId: string, kind: RelativeKind, data: Partial<Person>, opts: AddRelativeOptions = {}): string {
+  function addRelative(targetId, kind, data, opts = {}) {
     const t = tree.value
     if (!t.persons[targetId]) throw new Error('Персона не найдена')
     const before = JSON.stringify(t)
@@ -217,9 +189,9 @@ export const useTreeStore = defineStore('tree', () => {
     }
   }
 
-  function addRelativeUnsafe(targetId: string, kind: RelativeKind, data: Partial<Person>, opts: AddRelativeOptions): string {
+  function addRelativeUnsafe(targetId, kind, data, opts) {
     const t = tree.value
-    let pid: string
+    let pid
     if (opts.existingId) {
       if (!t.persons[opts.existingId]) throw new Error('Персона не найдена')
       if (opts.existingId === targetId) throw new Error('Нельзя связать персону саму с собой')
@@ -236,7 +208,7 @@ export const useTreeStore = defineStore('tree', () => {
       pid = p.id
     }
 
-    const addFamily = (f: Family) => {
+    const addFamily = (f) => {
       t.families[f.id] = f
       return f
     }
@@ -252,7 +224,7 @@ export const useTreeStore = defineStore('tree', () => {
         const existingPartner = pf.partners[0]
         if (existingPartner && opts.existingId) {
           const both = Object.values(t.families).find(
-            (f) => f.id !== pf!.id && f.partners.includes(existingPartner) && f.partners.includes(pid),
+            (f) => f.id !== pf.id && f.partners.includes(existingPartner) && f.partners.includes(pid),
           )
           if (both) {
             pf.children = pf.children.filter((c) => c !== targetId)
@@ -267,12 +239,12 @@ export const useTreeStore = defineStore('tree', () => {
       case 'son':
       case 'daughter': {
         if (opts.existingId && G.parentFamily(t, pid)) {
-          const pf = G.parentFamily(t, pid)!
+          const pf = G.parentFamily(t, pid)
           if (pf.partners.length >= 2) throw new Error('У выбранной персоны уже есть оба родителя')
           if (!pf.partners.includes(targetId)) pf.partners.push(targetId)
           break
         }
-        let fam: Family | undefined
+        let fam
         if (opts.familyId && t.families[opts.familyId]) fam = t.families[opts.familyId]
         else {
           // семья с одним родителем
@@ -285,7 +257,7 @@ export const useTreeStore = defineStore('tree', () => {
       case 'brother':
       case 'sister': {
         if (opts.existingId && G.parentFamily(t, pid)) throw new Error('У выбранной персоны уже есть родители')
-        let fam: Family | undefined
+        let fam
         if (opts.familyId && t.families[opts.familyId]) fam = t.families[opts.familyId]
         else fam = G.parentFamily(t, targetId)
         if (!fam) fam = addFamily(newFamily({ partners: [], children: [targetId], status: 'unknown' }))
@@ -317,7 +289,7 @@ export const useTreeStore = defineStore('tree', () => {
     }
   }
 
-  function deletePerson(id: string) {
+  function deletePerson(id) {
     const t = tree.value
     if (!t.persons[id]) return
     snapshot()
@@ -325,7 +297,7 @@ export const useTreeStore = defineStore('tree', () => {
     const neighbours = [
       ...G.childrenOf(t, id),
       ...G.partnersOf(t, id).map((x) => x.id),
-      ...Object.values(G.parentsOf(t, id)).filter((x): x is string => typeof x === 'string'),
+      ...Object.values(G.parentsOf(t, id)).filter((x) => typeof x === 'string'),
       ...G.siblingsOf(t, id).full,
     ]
     delete t.persons[id]
@@ -340,7 +312,7 @@ export const useTreeStore = defineStore('tree', () => {
     if (selectedId.value === id) selectedId.value = fallback
   }
 
-  function updateFamily(id: string, patch: Partial<Family>) {
+  function updateFamily(id, patch) {
     const f = tree.value.families[id]
     if (!f) return
     snapshot()
@@ -348,7 +320,7 @@ export const useTreeStore = defineStore('tree', () => {
   }
 
   /** Разорвать связь «партнёры» (дети остаются с первым партнёром) */
-  function removePartnership(familyId: string, keepId: string) {
+  function removePartnership(familyId, keepId) {
     const f = tree.value.families[familyId]
     if (!f) return
     snapshot()
@@ -358,7 +330,7 @@ export const useTreeStore = defineStore('tree', () => {
   }
 
   /** Отвязать ребёнка от родителей */
-  function detachChild(childId: string) {
+  function detachChild(childId) {
     const f = G.parentFamily(tree.value, childId)
     if (!f) return
     snapshot()
@@ -367,7 +339,7 @@ export const useTreeStore = defineStore('tree', () => {
   }
 
   // Фото
-  function addPhoto(pid: string, src: string, caption = '', asAvatar = false) {
+  function addPhoto(pid, src, caption = '', asAvatar = false) {
     const p = tree.value.persons[pid]
     if (!p) return
     snapshot()
@@ -377,7 +349,7 @@ export const useTreeStore = defineStore('tree', () => {
     touch(p)
     return photo.id
   }
-  function removePhoto(pid: string, photoId: string) {
+  function removePhoto(pid, photoId) {
     const p = tree.value.persons[pid]
     if (!p) return
     snapshot()
@@ -385,34 +357,34 @@ export const useTreeStore = defineStore('tree', () => {
     if (p.avatarId === photoId) p.avatarId = p.photos[0]?.id ?? null
     touch(p)
   }
-  function setAvatar(pid: string, photoId: string | null) {
+  function setAvatar(pid, photoId) {
     const p = tree.value.persons[pid]
     if (!p) return
     snapshot()
     p.avatarId = photoId
     touch(p)
   }
-  function updatePhoto(pid: string, photoId: string, caption: string) {
+  function updatePhoto(pid, photoId, caption) {
     const p = tree.value.persons[pid]
     const ph = p?.photos.find((x) => x.id === photoId)
     if (!ph) return
     snapshot()
     ph.caption = caption
   }
-  const avatarOf = (p?: Person | null) => (p?.avatarId ? p.photos.find((x) => x.id === p.avatarId)?.src : undefined)
+  const avatarOf = (p) => (p?.avatarId ? p.photos.find((x) => x.id === p.avatarId)?.src : undefined)
 
   // Факты
-  function saveFact(pid: string, fact: Fact) {
+  function saveFact(pid, fact) {
     const p = tree.value.persons[pid]
     if (!p) return
     snapshot()
     const i = p.facts.findIndex((f) => f.id === fact.id)
-    const copy = JSON.parse(JSON.stringify(fact)) as Fact
+    const copy = JSON.parse(JSON.stringify(fact))
     if (i >= 0) p.facts[i] = copy
     else p.facts.push(copy)
     touch(p)
   }
-  function removeFact(pid: string, factId: string) {
+  function removeFact(pid, factId) {
     const p = tree.value.persons[pid]
     if (!p) return
     snapshot()
@@ -421,7 +393,7 @@ export const useTreeStore = defineStore('tree', () => {
   }
 
   // Целое древо
-  function replaceTree(data: TreeData) {
+  function replaceTree(data) {
     snapshot()
     tree.value = data
     focusId.value = data.homePersonId ?? Object.keys(data.persons)[0] ?? null
@@ -433,15 +405,54 @@ export const useTreeStore = defineStore('tree', () => {
   const newTree = () => replaceTree(emptyTree())
 
   return {
-    tree, ui, focusId, selectedId, lastSaved, saveError,
+    tree,
+    ui,
+    focusId,
+    selectedId,
+    lastSaved,
+    saveError,
     // history
-    undo, redo, canUndo, canRedo,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     // getters
-    persons, count, focus, selected, homeId, places,
-    person, parentsOf, partnersOf, childrenOf, siblingsOf, spouseFamilies, relationToHome, canAdd, avatarOf,
+    persons,
+    count,
+    focus,
+    selected,
+    homeId,
+    places,
+    person,
+    parentsOf,
+    partnersOf,
+    childrenOf,
+    siblingsOf,
+    spouseFamilies,
+    relationToHome,
+    canAdd,
+    avatarOf,
     // actions
-    setFocus, select, setHome, renameTree, updatePerson, addRelative, deletePerson, updateFamily,
-    removePartnership, detachChild, addPhoto, removePhoto, setAvatar, updatePhoto, saveFact, removeFact,
-    replaceTree, loadDemo, loadOriginal, loadRomanovs, newTree,
+    setFocus,
+    select,
+    setHome,
+    renameTree,
+    updatePerson,
+    addRelative,
+    deletePerson,
+    updateFamily,
+    removePartnership,
+    detachChild,
+    addPhoto,
+    removePhoto,
+    setAvatar,
+    updatePhoto,
+    saveFact,
+    removeFact,
+    replaceTree,
+    loadDemo,
+    loadOriginal,
+    loadRomanovs,
+    newTree,
   }
 })

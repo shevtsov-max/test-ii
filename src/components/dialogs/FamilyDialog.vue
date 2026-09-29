@@ -1,7 +1,6 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import type { FamilyStatus, LifeEvent } from '@/types'
 import DateInput from '@/components/common/DateInput.vue'
 import PlaceInput from '@/components/common/PlaceInput.vue'
 import PersonAvatar from '@/components/common/PersonAvatar.vue'
@@ -18,11 +17,11 @@ const open = computed({
   set: (v) => (ui.familyDialog.open = v),
 })
 const fam = computed(() => (ui.familyDialog.familyId ? store.tree.families[ui.familyDialog.familyId] : undefined))
-const partners = computed(() => (fam.value?.partners ?? []).map((id) => store.person(id)!).filter(Boolean))
+const partners = computed(() => (fam.value?.partners ?? []).map((id) => store.person(id)).filter(Boolean))
 
-const status = ref<FamilyStatus>('married')
-const marriage = ref<LifeEvent>(emptyEvent())
-const divorce = ref<LifeEvent>(emptyEvent())
+const status = ref('married')
+const marriage = ref(emptyEvent())
+const divorce = ref(emptyEvent())
 
 watch(
   () => ui.familyDialog.open,
@@ -45,7 +44,7 @@ function save() {
   $q.notify({ type: 'positive', message: 'Отношения обновлены', timeout: 1500 })
 }
 
-function addChild(kind: 'son' | 'daughter') {
+function addChild(kind) {
   if (!fam.value) return
   const parent = fam.value.partners[0]
   open.value = false

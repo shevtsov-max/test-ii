@@ -1,7 +1,5 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref } from 'vue'
-import type { QTableColumn } from 'quasar'
-import type { Person } from '@/types'
 import PersonAvatar from '@/components/common/PersonAvatar.vue'
 import { useTreeStore } from '@/stores/tree'
 import { useUiStore } from '@/stores/ui'
@@ -14,8 +12,8 @@ const ui = useUiStore()
 const actions = usePersonActions()
 
 const search = ref('')
-const gender = ref<'all' | 'M' | 'F' | 'U'>('all')
-const alive = ref<'all' | 'living' | 'dead'>('all')
+const gender = ref('all')
+const alive = ref('all')
 
 const rows = computed(() => {
   const n = search.value.toLowerCase().trim().split(/\s+/).filter(Boolean)
@@ -24,12 +22,13 @@ const rows = computed(() => {
     if (alive.value === 'living' && !p.living) return false
     if (alive.value === 'dead' && p.living) return false
     if (!n.length) return true
-    const hay = `${fullName(p, { middle: true })} ${p.birthName} ${p.birth.place} ${p.death.place} ${p.birth.date.year ?? ''}`.toLowerCase()
+    const hay =
+      `${fullName(p, { middle: true })} ${p.birthName} ${p.birth.place} ${p.death.place} ${p.birth.date.year ?? ''}`.toLowerCase()
     return n.every((x) => hay.includes(x))
   })
 })
 
-const columns: QTableColumn<Person>[] = [
+const columns = [
   {
     name: 'name',
     label: 'Имя',
@@ -62,7 +61,7 @@ const columns: QTableColumn<Person>[] = [
 const pagination = ref({ sortBy: 'birth', descending: false, rowsPerPage: 25 })
 
 function exportCsv() {
-  const esc = (s: string) => `"${(s ?? '').replace(/"/g, '""')}"`
+  const esc = (s) => `"${(s ?? '').replace(/"/g, '""')}"`
   const head = ['Фамилия', 'Имя', 'Отчество', 'Пол', 'Дата рождения', 'Место рождения', 'Дата смерти', 'Место смерти', 'Родство']
   const lines = rows.value.map((p) =>
     [

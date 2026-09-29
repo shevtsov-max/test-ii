@@ -1,29 +1,6 @@
-import type { Family, FamilyStatus, Gender, Person, TreeData } from '@/types'
 import { emptyDate, newFamily, newPerson } from '@/utils/person'
 
-export interface P {
-  id: string
-  g: Gender
-  f: string
-  l: string
-  m?: string
-  b?: number | [number, number?, number?]
-  bp?: string
-  d?: number | [number, number?, number?]
-  dp?: string
-  bio?: string
-  occ?: string
-  /** Титул */
-  t?: string
-  /** Суффикс (II, III…) */
-  s?: string
-  /** Имя при рождении */
-  bn?: string
-  /** Фото: [файл в public/photos, подпись]; первое — главное */
-  ph?: [string, string][]
-}
-
-function mk(p: P): Person {
+function mk(p) {
   const [by, bm, bd] = Array.isArray(p.b) ? p.b : [p.b]
   const [dy, dm, dd] = Array.isArray(p.d) ? p.d : [p.d]
   const person = newPerson({
@@ -39,7 +16,12 @@ function mk(p: P): Person {
     birthName: p.bn ?? '',
   })
   person.birth = { date: { ...emptyDate(), year: by ?? null, month: bm ?? null, day: bd ?? null }, place: p.bp ?? '' }
-  if (p.d) person.death = { date: { ...emptyDate(), year: dy ?? null, month: dm ?? null, day: dd ?? null }, place: p.dp ?? '', cause: '' }
+  if (p.d)
+    person.death = {
+      date: { ...emptyDate(), year: dy ?? null, month: dm ?? null, day: dd ?? null },
+      place: p.dp ?? '',
+      cause: '',
+    }
   if (p.ph?.length) {
     person.photos = p.ph.map(([file, caption], i) => ({
       id: `${p.id}-ph${i}`,
@@ -49,18 +31,17 @@ function mk(p: P): Person {
     }))
     person.avatarId = person.photos[0].id
   }
-  if (p.occ)
-    person.facts.push({ id: `${p.id}-occ`, type: 'occupation', date: emptyDate(), place: '', description: p.occ })
+  if (p.occ) person.facts.push({ id: `${p.id}-occ`, type: 'occupation', date: emptyDate(), place: '', description: p.occ })
   return person
 }
 
-export function fam(id: string, partners: string[], children: string[], status: FamilyStatus = 'married', year?: number): Family {
+export function fam(id, partners, children, status = 'married', year) {
   const f = newFamily({ id, partners, children, status })
   if (year) f.marriage.date.year = year
   return f
 }
 
-export function build(id: string, name: string, home: string, persons: P[], families: Family[]): TreeData {
+export function build(id, name, home, persons, families) {
   return {
     version: 1,
     id,
@@ -72,7 +53,7 @@ export function build(id: string, name: string, home: string, persons: P[], fami
 }
 
 /** Текущее древо пользователя (как на MyHeritage). */
-export function shevtsovTree(): TreeData {
+export function shevtsovTree() {
   return build(
     'shevtsov',
     'Шевцов Family Tree',
@@ -88,8 +69,8 @@ export function shevtsovTree(): TreeData {
 }
 
 /** Большое демо-древо — для проверки раскладки. */
-export function demoTree(): TreeData {
-  const persons: P[] = [
+export function demoTree() {
+  const persons = [
     // IV поколение
     { id: 'gg1', g: 'M', f: 'Пётр', l: 'Орлов', m: 'Ильич', b: 1898, d: 1965, bp: 'Тверь', dp: 'Москва', occ: 'Кузнец' },
     { id: 'gg2', g: 'F', f: 'Анна', l: 'Орлова', m: 'Васильевна', b: 1902, d: 1979, bp: 'Тверь' },
@@ -110,8 +91,17 @@ export function demoTree(): TreeData {
     { id: 'uncleW', g: 'F', f: 'Галина', l: 'Орлова', b: 1954 },
     { id: 'aunt', g: 'F', f: 'Ольга', l: 'Лебедева', b: 1962 },
     // I поколение
-    { id: 'me', g: 'M', f: 'Алексей', l: 'Орлов', m: 'Сергеевич', b: [1985, 6, 12], bp: 'Москва', occ: 'Разработчик',
-      bio: 'Родился в Москве. Окончил МГТУ им. Баумана. Увлекается историей семьи.' },
+    {
+      id: 'me',
+      g: 'M',
+      f: 'Алексей',
+      l: 'Орлов',
+      m: 'Сергеевич',
+      b: [1985, 6, 12],
+      bp: 'Москва',
+      occ: 'Разработчик',
+      bio: 'Родился в Москве. Окончил МГТУ им. Баумана. Увлекается историей семьи.',
+    },
     { id: 'wife', g: 'F', f: 'Екатерина', l: 'Орлова', b: [1988, 2, 3] },
     { id: 'sis', g: 'F', f: 'Дарья', l: 'Смирнова', b: 1989 },
     { id: 'sisH', g: 'M', f: 'Павел', l: 'Смирнов', b: 1987 },
@@ -136,7 +126,7 @@ export function demoTree(): TreeData {
   return build('demo', 'Демо: семья Орловых', 'me', persons, families)
 }
 
-export function emptyTree(name = 'Моё семейное древо'): TreeData {
+export function emptyTree(name = 'Моё семейное древо') {
   const me = newPerson({ firstName: 'Я', gender: 'U' })
   return { version: 1, id: 'tree-' + Date.now(), name, homePersonId: me.id, persons: { [me.id]: me }, families: {} }
 }

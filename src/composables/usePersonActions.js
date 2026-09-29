@@ -6,7 +6,7 @@ export function usePersonActions() {
   const $q = useQuasar()
   const store = useTreeStore()
 
-  function remove(id: string, after?: () => void) {
+  function remove(id, after) {
     const p = store.person(id)
     if (!p) return
     $q.dialog({
@@ -25,12 +25,12 @@ export function usePersonActions() {
     })
   }
 
-  function setHome(id: string) {
+  function setHome(id) {
     store.setHome(id)
     $q.notify({ type: 'positive', message: `${shortName(store.person(id))} — теперь «Это Вы»` })
   }
 
-  function detachFromParents(id: string) {
+  function detachFromParents(id) {
     $q.dialog({
       title: 'Отвязать от родителей?',
       message: 'Связь с родителями будет удалена. Сами персоны останутся в древе.',

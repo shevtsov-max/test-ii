@@ -22,5 +22,5 @@ app.use(Quasar, {
   },
 })
 // Иконки `sym_r_*` отрисовываются из SVG (без загрузки 5-мегабайтного шрифта)
-app.config.globalProperties.$q.iconMapFn = (name: string) => (ICONS[name] ? { icon: ICONS[name] } : undefined)
+app.config.globalProperties.$q.iconMapFn = (name) => (ICONS[name] ? { icon: ICONS[name] } : undefined)
 app.mount('#app')

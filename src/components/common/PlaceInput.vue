@@ -1,19 +1,19 @@
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import { useTreeStore } from '@/stores/tree'
 
-const model = defineModel<string>({ required: true })
-defineProps<{ label?: string }>()
+const model = defineModel({ type: String, required: true })
+defineProps({ label: String })
 const store = useTreeStore()
-const options = ref<string[]>([])
+const options = ref([])
 
-function filter(val: string, update: (fn: () => void) => void) {
+function filter(val, update) {
   update(() => {
     const n = val.toLowerCase()
     options.value = store.places.filter((p) => p.toLowerCase().includes(n)).slice(0, 12)
   })
 }
-function onInput(v: string) {
+function onInput(v) {
   model.value = v
 }
 </script>

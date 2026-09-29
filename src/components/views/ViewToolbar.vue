@@ -1,10 +1,10 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
 import PersonSelect from '@/components/common/PersonSelect.vue'
 import { useTreeStore } from '@/stores/tree'
 import { useUiStore } from '@/stores/ui'
 
-const props = defineProps<{ shown?: number; maxGen?: number }>()
+const props = defineProps({ shown: Number, maxGen: Number })
 const store = useTreeStore()
 const ui = useUiStore()
 
@@ -20,7 +20,7 @@ const genLabel = computed(() => {
   return g >= 99 ? 'Все' : String(g)
 })
 
-function pick(id: string) {
+function pick(id) {
   store.setFocus(id)
 }
 </script>

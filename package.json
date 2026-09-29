@@ -6,9 +6,8 @@
   "scripts": {
     "icons": "node scripts/gen-icons.mjs",
     "dev": "npm run icons && vite",
-    "build": "npm run icons && vue-tsc -b && vite build",
-    "preview": "vite preview",
-    "typecheck": "vue-tsc -b"
+    "build": "npm run icons && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
@@ -19,13 +18,8 @@
   },
   "devDependencies": {
     "@quasar/vite-plugin": "^2.0.2",
-    "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
-    "@vue/tsconfig": "^0.9.1",
     "sass-embedded": "^1.105.0",
-    "tsx": "^4.23.15",
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0",
-    "vue-tsc": "^3.3.11"
+    "vite": "^8.3.0"
   }
 }

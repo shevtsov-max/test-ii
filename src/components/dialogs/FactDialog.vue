@@ -1,6 +1,5 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref, watch } from 'vue'
-import type { Fact, FactType } from '@/types'
 import DateInput from '@/components/common/DateInput.vue'
 import PlaceInput from '@/components/common/PlaceInput.vue'
 import { useTreeStore } from '@/stores/tree'
@@ -16,7 +15,7 @@ const open = computed({
 })
 const person = computed(() => store.person(ui.factDialog.personId))
 const isNew = computed(() => !ui.factDialog.factId)
-const fact = ref<Fact>({ id: '', type: 'occupation', date: emptyDate(), place: '', description: '' })
+const fact = ref({ id: '', type: 'occupation', date: emptyDate(), place: '', description: '' })
 
 watch(
   () => ui.factDialog.open,
@@ -29,7 +28,7 @@ watch(
   },
 )
 
-const HINTS: Partial<Record<FactType, string>> = {
+const HINTS = {
   education: 'Учебное заведение, специальность',
   occupation: 'Должность, место работы',
   residence: 'Адрес или описание',

@@ -1,23 +1,19 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
-import type { Gender, Person } from '@/types'
 import { useTreeStore } from '@/stores/tree'
 
-const props = withDefaults(
-  defineProps<{
-    person?: Person | null
-    gender?: Gender
-    size?: number
-    camera?: boolean
-    ring?: boolean
-    photos?: boolean
-  }>(),
-  { size: 44, camera: false, ring: false, photos: true },
-)
-const emit = defineEmits<{ camera: [] }>()
+const props = defineProps({
+  person: { type: Object, default: null },
+  gender: String,
+  size: { type: Number, default: 44 },
+  camera: { type: Boolean, default: false },
+  ring: { type: Boolean, default: false },
+  photos: { type: Boolean, default: true },
+})
+const emit = defineEmits(['camera'])
 const store = useTreeStore()
 
-const g = computed<Gender>(() => props.person?.gender ?? props.gender ?? 'U')
+const g = computed(() => props.person?.gender ?? props.gender ?? 'U')
 const src = computed(() => (props.photos ? store.avatarOf(props.person) : undefined))
 </script>
 

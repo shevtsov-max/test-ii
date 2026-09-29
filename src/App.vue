@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import AppHeader from '@/components/layout/AppHeader.vue'
@@ -36,8 +36,8 @@ const drawer = computed({
   set: (v) => (store.ui.panelOpen = v),
 })
 
-function onKey(e: KeyboardEvent) {
-  const tag = (e.target as HTMLElement)?.tagName
+function onKey(e) {
+  const tag = e.target?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA') return
   const mod = e.ctrlKey || e.metaKey
   if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
