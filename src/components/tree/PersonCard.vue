@@ -57,8 +57,9 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
       <q-icon name="sym_r_edit" size="15px" />
     </button>
 
-    <button class="pc__add" title="Добавить родственника" @click.stop="emit('add')">
+    <button class="pc__add" title="Добавить родственника" aria-label="Добавить родственника" @click.stop="emit('add')">
       <q-icon name="sym_r_add" size="16px" />
+      <span class="pc__add-label">Добавить</span>
     </button>
     <button v-if="moreDown" class="pc__more pc__more--down" title="Показать потомков" @click.stop="emit('expand')">
       <q-icon name="sym_r_keyboard_arrow_down" size="16px" />
@@ -201,32 +202,70 @@ button {
   }
 }
 
+/*
+ * Кнопки «+», «показать предков/потомков» висят снаружи карточки и заходят внутрь лишь на 4px:
+ * у текста внутри запас ≥10px сверху и снизу, поэтому буквы они не перекрывают.
+ */
 .pc__add {
   position: absolute;
   left: 50%;
-  bottom: -13px;
+  bottom: -20px;
   transform: translateX(-50%);
-  width: 34px;
-  height: 18px;
-  border-radius: 0 0 12px 12px;
-  display: grid;
-  place-items: center;
+  z-index: 1;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
   background: var(--ft-surface);
-  color: var(--ft-muted);
+  color: var(--g);
   border: 1.5px solid color-mix(in srgb, var(--g) 55%, transparent);
-  border-top: 0;
-  clip-path: inset(1px -4px -4px -4px);
-  transition: 0.15s;
-  &:hover {
+  box-shadow: var(--ft-shadow);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    padding 0.2s,
+    box-shadow 0.15s;
+  &:hover,
+  &:focus-visible {
+    padding: 0 10px 0 6px;
     background: var(--ft-primary);
     border-color: var(--ft-primary);
     color: #fff;
+    box-shadow: var(--ft-shadow-lg);
+    outline: none;
+    .pc__add-label {
+      max-width: 72px;
+      margin-left: 3px;
+      opacity: 1;
+    }
+  }
+}
+.pc__add-label {
+  max-width: 0;
+  opacity: 0;
+  transition:
+    max-width 0.2s,
+    margin 0.2s,
+    opacity 0.15s;
+}
+@media (pointer: coarse) {
+  .pc__add {
+    height: 30px;
+    min-width: 30px;
+    bottom: -24px;
   }
 }
 
 .pc__more {
   position: absolute;
-  left: 50%;
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -237,16 +276,16 @@ button {
   box-shadow: var(--ft-shadow);
   transition: transform 0.15s;
   &:hover {
-    transform: translateX(-50%) scale(1.15);
+    transform: scale(1.15);
   }
 }
 .pc__more--up {
-  top: -12px;
-  transform: translateX(-50%);
+  top: -18px;
+  left: 50%;
+  margin-left: -11px;
 }
 .pc__more--down {
-  bottom: -24px;
-  left: calc(50% + 30px);
-  transform: translateX(-50%);
+  bottom: -18px;
+  right: 14px;
 }
 </style>

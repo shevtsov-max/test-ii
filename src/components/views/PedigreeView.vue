@@ -13,7 +13,7 @@ const { upload } = usePhotoUpload()
 const CW = 210
 const CH = 68
 const GAP_X = 70
-const GAP_Y = 14
+const GAP_Y = 34
 const MAX = 5
 
 const gens = computed(() => Math.min(store.ui.generations, MAX))
