@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { Fact, Family, FamilyStatus, Person, RelativeKind, TreeData, ViewMode } from '@/types'
 import { shevtsovTree, demoTree, emptyTree } from '@/data/seed'
+import { romanovTree } from '@/data/romanovs'
 import { newFamily, newPerson, uid } from '@/utils/person'
 import * as G from '@/utils/graph'
 
@@ -42,7 +43,7 @@ export interface UiSettings {
 }
 
 export const useTreeStore = defineStore('tree', () => {
-  const tree = ref<TreeData>(load<TreeData>(LS_TREE) ?? shevtsovTree())
+  const tree = ref<TreeData>(load<TreeData>(LS_TREE) ?? romanovTree())
   const savedUi = load<Partial<UiSettings> & { focusId?: string; selectedId?: string }>(LS_UI) ?? {}
 
   const ui = ref<UiSettings>({
@@ -428,6 +429,7 @@ export const useTreeStore = defineStore('tree', () => {
   }
   const loadDemo = () => replaceTree(demoTree())
   const loadOriginal = () => replaceTree(shevtsovTree())
+  const loadRomanovs = () => replaceTree(romanovTree())
   const newTree = () => replaceTree(emptyTree())
 
   return {
@@ -440,6 +442,6 @@ export const useTreeStore = defineStore('tree', () => {
     // actions
     setFocus, select, setHome, renameTree, updatePerson, addRelative, deletePerson, updateFamily,
     removePartnership, detachChild, addPhoto, removePhoto, setAvatar, updatePhoto, saveFact, removeFact,
-    replaceTree, loadDemo, loadOriginal, newTree,
+    replaceTree, loadDemo, loadOriginal, loadRomanovs, newTree,
   }
 })

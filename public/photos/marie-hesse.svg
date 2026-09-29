@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 375" width="300" height="375">
+<defs>
+<radialGradient id="gmariehesse" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#65605a"/><stop offset="1" stop-color="#25221f"/></radialGradient>
+<radialGradient id="vmariehesse" cx="50%" cy="45%" r="70%"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+<filter id="smariehesse"><feColorMatrix type="matrix" values="0.42 0.62 0.16 0 0.02  0.34 0.52 0.13 0 0.01  0.26 0.4 0.1 0 0  0 0 0 1 0"/></filter>
+</defs>
+<g filter="url(#smariehesse)">
+<rect width="300" height="375" fill="url(#gmariehesse)"/>
+<ellipse cx="150" cy="104" rx="62" ry="40" fill="#4a3a30"/><ellipse cx="150" cy="70" rx="30" ry="20" fill="#4a3a30"/>
+<path d="M10 375 C14 318 62 296 112 286 L188 286 C238 296 286 318 290 375Z" fill="#2b2b3a"/><path d="M104 292 Q150 350 196 292 L186 284 Q150 330 114 284Z" fill="#ece5d8" opacity=".9"/>
+<circle cx="114.0" cy="296.0" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="121.2" cy="304.0" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="128.4" cy="311.3" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="135.6" cy="317.0" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="142.8" cy="320.7" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="150.0" cy="322.0" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="157.2" cy="320.7" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="164.4" cy="317.0" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="171.6" cy="311.3" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="178.8" cy="304.0" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/><circle cx="186.0" cy="296.0" r="4.2" fill="#f3efe6" stroke="#cbbfa8" stroke-width=".8"/>
+<path d="M128 240 L128 292 Q150 312 172 292 L172 240Z" fill="#f1d3b8"/><path d="M128 262 Q150 282 172 262 L172 240 L128 240Z" fill="#00000022"/>
+<ellipse cx="97" cy="176" rx="8" ry="15" fill="#f1d3b8"/><ellipse cx="203" cy="176" rx="8" ry="15" fill="#f1d3b8"/>
+<ellipse cx="150" cy="168" rx="52" ry="66" fill="#f1d3b8"/>
+<path d="M98 148 C98 104 122 90 150 90 C178 90 202 104 202 148 C190 124 172 116 150 116 C128 116 110 124 98 148Z" fill="#4a3a30"/>
+
+<ellipse cx="128" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/><ellipse cx="172" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/>
+<path d="M116 154 Q128 148 140 153 M160 153 Q172 148 184 154" stroke="#4a3a30" stroke-width="3.6" stroke-linecap="round" fill="none" opacity=".9"/>
+<path d="M150 170 L145 194 Q150 198 155 194Z" fill="#00000026"/>
+<path d="M136 212 Q150 220 164 212" stroke="#8a4a3a" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+</g>
+<rect width="300" height="375" fill="url(#vmariehesse)"/>
+</svg>

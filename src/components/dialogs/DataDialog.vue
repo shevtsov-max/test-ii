@@ -73,6 +73,12 @@ function demo() {
     open.value = false
   })
 }
+function romanovs() {
+  confirmReplace('Будет загружено тестовое древо: Николай II и европейские династии.', () => {
+    store.loadRomanovs()
+    open.value = false
+  })
+}
 function original() {
   confirmReplace('Будет восстановлено исходное древо «Шевцов».', () => {
     store.loadOriginal()
@@ -139,6 +145,7 @@ function fresh() {
 
         <div class="ft-section-title q-mt-lg q-mb-sm">Другое</div>
         <div class="row q-gutter-sm">
+          <q-btn outline no-caps color="primary" icon="sym_r_account_tree" label="Тест: Романовы" @click="romanovs" />
           <q-btn outline no-caps color="primary" icon="sym_r_science" label="Демо-древо" @click="demo" />
           <q-btn outline no-caps color="primary" icon="sym_r_restart_alt" label="Древо «Шевцов»" @click="original" />
           <q-btn flat no-caps color="negative" icon="sym_r_note_add" label="Новое пустое древо" @click="fresh" />

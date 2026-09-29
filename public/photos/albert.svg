@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 375" width="300" height="375">
+<defs>
+<radialGradient id="galbert" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#5a5650"/><stop offset="1" stop-color="#1f1d1a"/></radialGradient>
+<radialGradient id="valbert" cx="50%" cy="45%" r="70%"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+<filter id="salbert"><feColorMatrix type="matrix" values="0.42 0.62 0.16 0 0.02  0.34 0.52 0.13 0 0.01  0.26 0.4 0.1 0 0  0 0 0 1 0"/></filter>
+</defs>
+<g filter="url(#salbert)">
+<rect width="300" height="375" fill="url(#galbert)"/>
+
+<path d="M10 375 C14 318 62 296 112 286 L188 286 C238 296 286 318 290 375Z" fill="#1f1f26"/><path d="M124 286 L150 350 L176 286Z" fill="#f1eee6"/><path d="M112 286 L150 375 L124 375 L96 300Z M188 286 L150 375 L176 375 L204 300Z" fill="#00000035"/><path d="M146 300 L154 300 L152 340 L148 340Z" fill="#7a2f2f"/>
+<path d="M112 286 L232 375 L206 375 L100 296Z" fill="#3a74b0" opacity=".9"/>
+<path d="M128 240 L128 292 Q150 312 172 292 L172 240Z" fill="#e8c3a0"/><path d="M128 262 Q150 282 172 262 L172 240 L128 240Z" fill="#00000022"/>
+<ellipse cx="97" cy="176" rx="8" ry="15" fill="#e8c3a0"/><ellipse cx="203" cy="176" rx="8" ry="15" fill="#e8c3a0"/>
+<ellipse cx="150" cy="168" rx="52" ry="66" fill="#e8c3a0"/>
+<path d="M98 152 C94 106 108 92 122 92 C120 108 112 126 108 148Z M202 152 C206 106 192 92 178 92 C180 108 188 126 192 148Z" fill="#5a4a3a"/><path d="M118 96 C136 82 164 82 182 96 C170 92 130 92 118 96Z" fill="#5a4a3a" opacity=".7"/>
+<path d="M100 150 C98 190 104 208 112 214 C112 190 112 170 108 150Z M200 150 C202 190 196 208 188 214 C188 190 188 170 192 150Z" fill="#5a4a3a"/>
+<ellipse cx="128" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/><ellipse cx="172" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/>
+<path d="M116 154 Q128 148 140 153 M160 153 Q172 148 184 154" stroke="#5a4a3a" stroke-width="3.6" stroke-linecap="round" fill="none" opacity=".9"/>
+<path d="M150 170 L145 194 Q150 198 155 194Z" fill="#00000026"/>
+<path d="M136 212 Q150 220 164 212" stroke="#8a4a3a" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+</g>
+<rect width="300" height="375" fill="url(#valbert)"/>
+</svg>

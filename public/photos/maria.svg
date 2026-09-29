@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 375" width="300" height="375">
+<defs>
+<radialGradient id="gmaria" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#8f8a7a"/><stop offset="1" stop-color="#403b2f"/></radialGradient>
+<radialGradient id="vmaria" cx="50%" cy="45%" r="70%"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+
+</defs>
+<g>
+<rect width="300" height="375" fill="url(#gmaria)"/>
+<path d="M92 170 C84 95 118 78 150 78 C182 78 216 95 208 170 C214 250 196 300 186 330 L114 330 C104 300 86 250 92 170Z" fill="#8b6a45"/>
+<path d="M10 375 C14 318 62 296 112 286 L188 286 C238 296 286 318 290 375Z" fill="#efe9de"/><path d="M112 286 Q150 344 188 286 L176 280 Q150 320 124 280Z" fill="#f4f0e8"/>
+
+<path d="M128 240 L128 292 Q150 312 172 292 L172 240Z" fill="#f5dcc6"/><path d="M128 262 Q150 282 172 262 L172 240 L128 240Z" fill="#00000022"/>
+<ellipse cx="97" cy="176" rx="8" ry="15" fill="#f5dcc6"/><ellipse cx="203" cy="176" rx="8" ry="15" fill="#f5dcc6"/>
+<ellipse cx="150" cy="168" rx="52" ry="66" fill="#f5dcc6"/>
+<path d="M98 150 C96 100 124 86 150 86 C176 86 204 100 202 150 C190 122 172 110 150 110 C128 110 110 122 98 150Z" fill="#8b6a45"/>
+
+<ellipse cx="128" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/><ellipse cx="172" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/>
+<path d="M116 154 Q128 148 140 153 M160 153 Q172 148 184 154" stroke="#8b6a45" stroke-width="3.6" stroke-linecap="round" fill="none" opacity=".9"/>
+<path d="M150 170 L145 194 Q150 198 155 194Z" fill="#00000026"/>
+<path d="M136 212 Q150 220 164 212" stroke="#8a4a3a" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+</g>
+<rect width="300" height="375" fill="url(#vmaria)"/>
+</svg>

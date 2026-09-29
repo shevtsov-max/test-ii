@@ -1,7 +1,7 @@
 import type { Family, FamilyStatus, Gender, Person, TreeData } from '@/types'
 import { emptyDate, newFamily, newPerson } from '@/utils/person'
 
-interface P {
+export interface P {
   id: string
   g: Gender
   f: string
@@ -13,6 +13,14 @@ interface P {
   dp?: string
   bio?: string
   occ?: string
+  /** Титул */
+  t?: string
+  /** Суффикс (II, III…) */
+  s?: string
+  /** Имя при рождении */
+  bn?: string
+  /** Фото: [файл в public/photos, подпись]; первое — главное */
+  ph?: [string, string][]
 }
 
 function mk(p: P): Person {
@@ -26,21 +34,33 @@ function mk(p: P): Person {
     middleName: p.m ?? '',
     living: !p.d,
     biography: p.bio ?? '',
+    title: p.t ?? '',
+    suffix: p.s ?? '',
+    birthName: p.bn ?? '',
   })
   person.birth = { date: { ...emptyDate(), year: by ?? null, month: bm ?? null, day: bd ?? null }, place: p.bp ?? '' }
   if (p.d) person.death = { date: { ...emptyDate(), year: dy ?? null, month: dm ?? null, day: dd ?? null }, place: p.dp ?? '', cause: '' }
+  if (p.ph?.length) {
+    person.photos = p.ph.map(([file, caption], i) => ({
+      id: `${p.id}-ph${i}`,
+      src: `${import.meta.env?.BASE_URL ?? './'}photos/${file}.svg`,
+      caption,
+      addedAt: 0,
+    }))
+    person.avatarId = person.photos[0].id
+  }
   if (p.occ)
     person.facts.push({ id: `${p.id}-occ`, type: 'occupation', date: emptyDate(), place: '', description: p.occ })
   return person
 }
 
-function fam(id: string, partners: string[], children: string[], status: FamilyStatus = 'married', year?: number): Family {
+export function fam(id: string, partners: string[], children: string[], status: FamilyStatus = 'married', year?: number): Family {
   const f = newFamily({ id, partners, children, status })
   if (year) f.marriage.date.year = year
   return f
 }
 
-function build(id: string, name: string, home: string, persons: P[], families: Family[]): TreeData {
+export function build(id: string, name: string, home: string, persons: P[], families: Family[]): TreeData {
   return {
     version: 1,
     id,

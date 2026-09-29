@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 375" width="300" height="375">
+<defs>
+<radialGradient id="gvictoria" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#54524e"/><stop offset="1" stop-color="#1c1b19"/></radialGradient>
+<radialGradient id="vvictoria" cx="50%" cy="45%" r="70%"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+<filter id="svictoria"><feColorMatrix type="matrix" values="0.42 0.62 0.16 0 0.02  0.34 0.52 0.13 0 0.01  0.26 0.4 0.1 0 0  0 0 0 1 0"/></filter>
+</defs>
+<g filter="url(#svictoria)">
+<rect width="300" height="375" fill="url(#gvictoria)"/>
+
+<path d="M10 375 C14 318 62 296 112 286 L188 286 C238 296 286 318 290 375Z" fill="#141414"/><path d="M104 292 Q150 350 196 292 L186 284 Q150 330 114 284Z" fill="#ece5d8" opacity=".9"/>
+
+<path d="M128 240 L128 292 Q150 312 172 292 L172 240Z" fill="#f1d3b8"/><path d="M128 262 Q150 282 172 262 L172 240 L128 240Z" fill="#00000022"/>
+<ellipse cx="97" cy="176" rx="8" ry="15" fill="#f1d3b8"/><ellipse cx="203" cy="176" rx="8" ry="15" fill="#f1d3b8"/>
+<ellipse cx="150" cy="168" rx="52" ry="66" fill="#f1d3b8"/>
+<path d="M100 150 C100 118 126 108 150 108 C174 108 200 118 200 150 C190 132 172 126 150 126 C128 126 110 132 100 150Z" fill="#dcdad4"/>
+
+<ellipse cx="128" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/><ellipse cx="172" cy="166" rx="6.5" ry="3.6" fill="#2a1f1a"/>
+<path d="M116 154 Q128 148 140 153 M160 153 Q172 148 184 154" stroke="#dcdad4" stroke-width="3.6" stroke-linecap="round" fill="none" opacity=".9"/>
+<path d="M150 170 L145 194 Q150 198 155 194Z" fill="#00000026"/>
+<path d="M136 212 Q150 220 164 212" stroke="#8a4a3a" stroke-width="3" stroke-linecap="round" fill="none"/>
+<path d="M112 104 L122 78 L136 96 L150 72 L164 96 L178 78 L188 104Z" fill="#e6c96a" stroke="#a88b2a" stroke-width="1.5"/><path d="M96 156 C92 92 124 86 150 86 C176 86 208 92 204 156 C196 118 176 108 150 108 C124 108 104 118 96 156Z" fill="#f2efe8"/><path d="M96 156 C90 190 90 230 96 262 L110 262 C104 226 104 190 106 156Z M204 156 C210 190 210 230 204 262 L190 262 C196 226 196 190 194 156Z" fill="#f2efe8"/>
+</g>
+<rect width="300" height="375" fill="url(#vvictoria)"/>
+</svg>
