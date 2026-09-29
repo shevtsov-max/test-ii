@@ -568,6 +568,8 @@ const factIcon = (type) => FACT_TYPES.find((f) => f.value === type)?.icon ?? 'sy
   overflow: hidden;
   background: var(--ft-surface-2);
   img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -623,6 +625,9 @@ const factIcon = (type) => FACT_TYPES.find((f) => f.value === type)?.icon ?? 'sy
 .prof__viewer-img {
   max-width: 90vw;
   max-height: 76vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }

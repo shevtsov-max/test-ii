@@ -373,6 +373,7 @@ function deathLine() {
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   button {
+    position: relative;
     aspect-ratio: 1;
     border: 0;
     padding: 0;
@@ -382,6 +383,8 @@ function deathLine() {
     background: var(--ft-surface-2);
   }
   img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;

@@ -55,6 +55,9 @@ const src = computed(() => (props.photos ? store.avatarOf(props.person) : undefi
   box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 4px var(--g);
 }
 .pa__img {
+  /* Абсолютно внутри круга: иначе img с height:100% в grid тянется по пропорции файла и вылезает за границы */
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border-radius: 50%;
