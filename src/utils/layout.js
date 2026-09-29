@@ -566,5 +566,12 @@ function renderLinks(links, nodes) {
       out.push({ key: `${l.key}-${k.key}`, kind: 'child', d, dashed: !!l.dashed, familyId: l.familyId })
     }
   }
+  // Одна семья может быть нарисована дважды (персона встречается в дереве в нескольких местах) — ключи должны быть уникальны
+  const seen = new Map()
+  for (const o of out) {
+    const n = (seen.get(o.key) ?? 0) + 1
+    seen.set(o.key, n)
+    if (n > 1) o.key = `${o.key}~${n}`
+  }
   return out
 }
