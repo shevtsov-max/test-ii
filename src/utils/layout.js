@@ -15,6 +15,8 @@ export const CARD_H = 68
 export const PH_W = 94
 export const PH_H = 58
 export const COUPLE_GAP = 36
+/** Зазор между парой заглушек «отец/мать»: 35 = 4 штриха по 5px через 5px — линия симметрично видна у обоих блоков */
+export const PH_PAIR_GAP = 35
 export const SIB_GAP = 26
 export const GROUP_GAP = 44
 export const ROW_H = CARD_H + 88
@@ -260,8 +262,8 @@ export function computeLayout(t, focusId, opts) {
       if (!pf && hasParentsVisible && opts.placeholders) {
         const f = placeholder(X, 'father', row - 1)
         const m = placeholder(X, 'mother', row - 1)
-        f.x = nodeX.x - (PH_W + 10) / 2
-        m.x = nodeX.x + (PH_W + 10) / 2
+        f.x = nodeX.x - (PH_W + PH_PAIR_GAP) / 2
+        m.x = nodeX.x + (PH_W + PH_PAIR_GAP) / 2
         S.add(f)
         S.add(m)
         S.links.push({ type: 'couple', key: `pc-${X}`, familyId: null, status: 'unknown', a: f, b: m, dashed: true })
