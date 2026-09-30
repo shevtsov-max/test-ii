@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push origin main)",
+      "Bash(git push -u origin main)",
+      "Bash(git push origin HEAD:main)"
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "The repository owner has authorized Claude to push directly to main of shevtsov-max/test-ii, edit .github/workflows, and merge pull requests without a separate review; the project has no production environment"
+    ]
+  }
+}
