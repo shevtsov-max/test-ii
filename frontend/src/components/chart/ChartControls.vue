@@ -1,11 +1,14 @@
 <script setup>
 defineProps({ zoom: { type: Number, required: true } })
-const emit = defineEmits(['zoom-in', 'zoom-out', 'fit', 'home', 'center', 'fullscreen'])
+const emit = defineEmits(['zoom-in', 'zoom-out', 'fit', 'home', 'center', 'fullscreen', 'reset'])
 </script>
 
 <template>
   <div class="cc" @pointerdown.stop @wheel.stop>
     <div class="cc__group">
+      <q-btn flat dense icon="sym_r_restart_alt" aria-label="Сбросить вид" @click="emit('reset')">
+        <q-tooltip anchor="center left" self="center right">Сбросить: «Это Вы» в центре, обычный масштаб (R)</q-tooltip>
+      </q-btn>
       <q-btn flat dense icon="sym_r_center_focus_strong" aria-label="К центральной персоне" @click="emit('center')">
         <q-tooltip anchor="center left" self="center right">К центральной персоне (0)</q-tooltip>
       </q-btn>

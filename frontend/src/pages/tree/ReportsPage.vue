@@ -186,7 +186,7 @@ function jump(num) {
             </div>
           </div>
         </section>
-        <footer class="rp__doc-foot">Составлено в «Родословной» · {{ new Date().toLocaleDateString('ru-RU') }}</footer>
+        <footer class="rp__doc-foot">Составлено в «Прапра» · {{ new Date().toLocaleDateString('ru-RU') }}</footer>
       </article>
       <EmptyState v-else icon="sym_r_description" title="Выберите персону" text="Роспись строится от родоначальника (для потомков) или от человека, чьих предков нужно расписать." />
     </div>

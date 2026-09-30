@@ -340,7 +340,7 @@ const isOwner = computed(() => tree.role === 'owner')
             <div>
               <b>Сейчас данные хранятся только в этом браузере.</b>
               Совместная работа, синхронизация между устройствами и передача веток родственникам станут доступны после подключения сервера. До тех пор делитесь
-              древом через экспорт — файл резервной копии можно открыть в «Родословной» на любом устройстве.
+              древом через экспорт — файл резервной копии можно открыть в «Прапра» на любом устройстве.
             </div>
           </div>
           <div class="ts__roles">
@@ -443,7 +443,7 @@ const isOwner = computed(() => tree.role === 'owner')
         <section id="ts-import" class="ft-card ft-card--pad ts__section">
           <div>
             <h2 class="ft-h3">Импорт</h2>
-            <div class="ts__hint">Поддерживаются резервные копии «Родословной» (.json) и GEDCOM (.ged) из других программ.</div>
+            <div class="ts__hint">Поддерживаются резервные копии «Прапра» (.json) и GEDCOM (.ged) из других программ.</div>
           </div>
           <div class="ts__import">
             <q-btn outline no-caps color="primary" icon="sym_r_add" label="Импортировать как новое древо" :loading="importing" @click="importAsNew" />

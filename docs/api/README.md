@@ -1,4 +1,4 @@
-# API «Родословной»
+# API «Прапра»
 
 Один эндпоинт GraphQL: `POST /graphql` (JSON `{ query, variables }`). Полная схема — [`schema.graphql`](schema.graphql);
 она **генерируется** из кода бэкенда: после изменения типов выполните

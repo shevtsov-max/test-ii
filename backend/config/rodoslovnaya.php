@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Настройки приложения «Родословная». Значения — из переменных окружения (см. .env.example в корне проекта).
+ * Настройки приложения «Прапра». Значения — из переменных окружения (см. .env.example в корне проекта).
  */
 return [
 
@@ -22,10 +22,10 @@ return [
      * required — без согласия с документом нельзя зарегистрироваться.
      */
     'legal' => [
-        'terms' => ['version' => '2026-10-01', 'required' => true],
-        'privacy' => ['version' => '2026-10-01', 'required' => true],
-        'personal_data' => ['version' => '2026-10-01', 'required' => true],
-        'marketing' => ['version' => '2026-10-01', 'required' => false],
+        'terms' => ['version' => '2026-10-02', 'required' => true],
+        'privacy' => ['version' => '2026-10-02', 'required' => true],
+        'personal_data' => ['version' => '2026-10-02', 'required' => true],
+        'marketing' => ['version' => '2026-10-02', 'required' => false],
     ],
 
     'trees' => [

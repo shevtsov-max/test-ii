@@ -192,10 +192,15 @@ export function renderLinks(links, nodes, M) {
       const dx = cx - ax
       const r = Math.min(R, Math.abs(dx) / 2, Math.abs(busY - ay) / 2)
       const s = Math.sign(dx) || 1
+      // Скругляем только настоящие углы (на концах шины). В Т-образных развилках линии разных детей
+      // расходятся в разные стороны — скругления там рисуют «двойную» линию, поэтому угол прямой.
+      const atEnd = (x) => x <= d.lo + 0.5 || x >= d.hi - 0.5
+      const ra = atEnd(ax) ? r : 0
+      const rc = atEnd(cx) ? r : 0
       // Одинаковая структура команд — чтобы CSS-переход по `d` работал плавно
       const path =
-        `M ${ax} ${ay} L ${ax} ${busY - r} Q ${ax} ${busY} ${ax + s * r} ${busY} ` +
-        `L ${cx - s * r} ${busY} Q ${cx} ${busY} ${cx} ${busY + r} L ${cx} ${top}`
+        `M ${ax} ${ay} L ${ax} ${busY - ra} Q ${ax} ${busY} ${ax + s * ra} ${busY} ` +
+        `L ${cx - s * rc} ${busY} Q ${cx} ${busY} ${cx} ${busY + rc} L ${cx} ${top}`
       const link = l.childLinks?.[pid(k)]
       out.push({
         key: `${l.key}-${k.key}`,

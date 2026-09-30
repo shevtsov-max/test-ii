@@ -364,6 +364,28 @@ export const useTreeStore = defineStore('tree', () => {
     focusId.value = id
     selectPerson(id)
   }
+  // Раздел «Древо» открывается от «Это Вы». Исключение — переход «Показать в древе» с конкретной персоной.
+  let chartIntent = false
+  /** Центр древа — эта персона, и раздел «Древо» не сбросит его при открытии. */
+  function focusForChart(id) {
+    setFocus(id)
+    chartIntent = true
+  }
+  /** Был ли запрошен конкретный центр (флаг сбрасывается при чтении). */
+  function takeChartIntent() {
+    const v = chartIntent
+    chartIntent = false
+    return v
+  }
+  /** Как при первом открытии: в центре и выбрана «Это Вы», история переходов очищена. */
+  function resetView() {
+    const t = tree.value
+    if (!t) return
+    const id = t.homePersonId && t.persons[t.homePersonId] ? t.homePersonId : (Object.keys(t.persons)[0] ?? null)
+    focusId.value = id
+    focusHistory.value = { back: [], forward: [] }
+    if (id) selectPerson(id)
+  }
   function selectPerson(id) {
     if (id && !person(id)) return
     selectedId.value = id
@@ -513,6 +535,9 @@ export const useTreeStore = defineStore('tree', () => {
     focusBack,
     focusForward,
     selectPerson,
+    focusForChart,
+    takeChartIntent,
+    resetView,
     ...actions,
   }
 })

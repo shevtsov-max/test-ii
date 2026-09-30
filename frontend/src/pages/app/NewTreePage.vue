@@ -217,7 +217,7 @@ const MODES = [
       <h2 class="ft-h2">Перенесите древо из другой программы</h2>
       <p>
         В «Древе Жизни», MyHeritage, Ancestry, Gramps, GenoPro и других программах есть экспорт в формат <b>GEDCOM (.ged)</b>. Сохраните файл и выберите
-        его здесь — люди, семьи, даты, места и заметки перенесутся. Подходит и резервная копия «Родословной» (.json).
+        его здесь — люди, семьи, даты, места и заметки перенесутся. Подходит и резервная копия «Прапра» (.json).
       </p>
       <q-btn unelevated no-caps color="primary" size="lg" icon="sym_r_folder_open" label="Выбрать файл" :loading="busy" @click="importFile" />
       <router-link :to="{ name: 'help', hash: '#import' }" class="nt__help">Как выгрузить GEDCOM из другой программы</router-link>

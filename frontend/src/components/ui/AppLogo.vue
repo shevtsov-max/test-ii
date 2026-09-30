@@ -1,4 +1,5 @@
 <script setup>
+/** Знак «Прапра»: крона — предки, зеркальные корни — потомки, в центре — «Вы». Тот же рисунок — public/favicon.svg. */
 defineProps({
   size: { type: Number, default: 30 },
   text: { type: Boolean, default: true },
@@ -7,7 +8,7 @@ defineProps({
 </script>
 
 <template>
-  <component :is="to ? 'router-link' : 'div'" :to="to ?? undefined" class="logo" aria-label="Родословная">
+  <component :is="to ? 'router-link' : 'div'" :to="to ?? undefined" class="logo" aria-label="Прапра">
     <svg :width="size" :height="size" viewBox="0 0 64 64" aria-hidden="true">
       <defs>
         <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
@@ -16,16 +17,13 @@ defineProps({
         </linearGradient>
       </defs>
       <rect width="64" height="64" rx="15" fill="url(#logo-g)" />
-      <g fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M32 21.5v8.5M17.5 39v-4.5a4.5 4.5 0 0 1 4.5-4.5h20a4.5 4.5 0 0 1 4.5 4.5V39" />
+      <g fill="none" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 32V12M32 23.5l-9.5-7.5M32 23.5l9.5-7.5M32 17.5l-4.5-5.5M32 17.5l4.5-5.5"/>
+        <path d="M32 32v20M32 40.5l-9.5 7.5M32 40.5l9.5 7.5M32 46.5l-4.5 5.5M32 46.5l4.5 5.5"/>
       </g>
-      <g fill="#fff">
-        <circle cx="32" cy="15.5" r="6.5" />
-        <circle cx="17.5" cy="45.5" r="6.5" />
-        <circle cx="46.5" cy="45.5" r="6.5" />
-      </g>
+      <circle cx="32" cy="32" r="5.6" fill="#FFE1BF" stroke="#fff" stroke-width="1.6"/>
     </svg>
-    <span v-if="text" class="logo__text">Родословная</span>
+    <span v-if="text" class="logo__text">Прапра</span>
   </component>
 </template>
 

@@ -31,12 +31,15 @@ const cam = usePanZoom(root, {
   minK: 0.05,
   maxK: 2.4,
   onFirstSize: () => {
-    cam.k.value = cam.size.value.w < 700 ? 0.72 : 0.95
+    cam.k.value = defaultZoom()
     centerFocus(0)
   },
   onResize: () => centerFocus(0),
 })
 const { tx, ty, k, size } = cam
+function defaultZoom() {
+  return cam.size.value.w < 700 ? 0.72 : 0.95
+}
 
 const P = computed(() => chartPalette($q.dark.isActive))
 const M = computed(() => props.layout.metrics)
@@ -274,6 +277,7 @@ function onKey(e) {
   else if (key === '0') centerFocus()
   else if (key.toLowerCase() === 'f' || key.toLowerCase() === 'а') fit()
   else if (key.toLowerCase() === 'h' || key.toLowerCase() === 'р') goHome()
+  else if (key.toLowerCase() === 'r' || key.toLowerCase() === 'к') resetView()
   else if (key === 'ArrowLeft') cam.pan(100, 0, 150)
   else if (key === 'ArrowRight') cam.pan(-100, 0, 150)
   else if (key === 'ArrowUp') cam.pan(0, 100, 150)
@@ -287,6 +291,21 @@ function onKey(e) {
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+
+/** Кнопка «Сбросить»: как при первом открытии раздела. */
+function resetView() {
+  ui.addOverlayFor = null
+  cameFrom.value = null
+  tree.resetView()
+  nextTick(() => {
+    const f = props.layout.focusNode
+    cam.resetUserMoved()
+    if (f) {
+      const c = nodeCenter(f)
+      cam.centerOn(c.x, c.y, defaultZoom(), 450)
+    }
+  })
+}
 
 function goHome() {
   const h = tree.homeId
@@ -324,7 +343,7 @@ const bgStyle = computed(() => {
   }
 })
 
-defineExpose({ fit, centerFocus, zoomAt: cam.zoomAt, goHome, svgRoot: () => root.value?.querySelector('svg.tc__svg') })
+defineExpose({ fit, centerFocus, zoomAt: cam.zoomAt, goHome, resetView, svgRoot: () => root.value?.querySelector('svg.tc__svg') })
 </script>
 
 <template>
@@ -435,6 +454,7 @@ defineExpose({ fit, centerFocus, zoomAt: cam.zoomAt, goHome, svgRoot: () => root
       @fit="fit()"
       @center="centerFocus()"
       @home="goHome"
+      @reset="resetView"
       @fullscreen="emit('fullscreen')"
     />
 

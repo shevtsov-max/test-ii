@@ -24,8 +24,11 @@ export function useTreeNav() {
       prefs.chart.scope = scope
       prefs.chart.view = 'tree'
     }
-    tree.setFocus(personId)
-    if (route.name !== 'tree-chart') router.push(to('tree-chart'))
+    if (route.name === 'tree-chart') tree.setFocus(personId)
+    else {
+      tree.focusForChart(personId)
+      router.push(to('tree-chart'))
+    }
   }
 
   function openReport(personId, kind) {

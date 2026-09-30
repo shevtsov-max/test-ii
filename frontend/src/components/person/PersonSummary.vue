@@ -207,6 +207,7 @@ const media = computed(() => G.value.mediaOf(props.personId).filter((m) => m.thu
 <style scoped lang="scss">
 .psum {
   padding: 18px 18px 28px;
+  overflow-x: hidden;
 }
 .psum__hero {
   position: relative;
@@ -261,6 +262,23 @@ const media = computed(() => G.value.mediaOf(props.personId).filter((m) => m.thu
   display: flex;
   gap: 8px;
   margin-top: 16px;
+  min-width: 0;
+  > .col {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 10px;
+  }
+  :deep(.q-btn__content) {
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+  :deep(.q-btn__content .block) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  > .q-btn--round {
+    flex: none;
+  }
 }
 .psum__center {
   margin-top: 6px;

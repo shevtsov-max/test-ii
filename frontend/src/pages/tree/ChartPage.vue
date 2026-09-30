@@ -30,6 +30,18 @@ const chartRef = ref()
 const stage = ref()
 const exporting = ref(false)
 
+// Раздел всегда открывается от «Это Вы» (кроме перехода «Показать в древе» с конкретной персоной)
+const keepFocus = tree.takeChartIntent()
+let opened = false
+watch(
+  () => (tree.tree ? tree.treeId : null),
+  (id) => {
+    if (!id || opened) return
+    opened = true
+    if (!keepFocus) tree.resetView()
+  },
+  { immediate: true },
+)
 // Центр по умолчанию — «Это Вы»
 watch(
   () => [tree.focusId, tree.tree],
@@ -59,7 +71,16 @@ const timelineSet = computed(() => {
 })
 
 const scope = computed(() => CHART_SCOPES.find((s) => s.value === c.scope) ?? CHART_SCOPES[1])
-const genOptions = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12]
+/** «Все поколения» — число заведомо больше глубины любого древа (раскладки ограничены данными) */
+const GEN_ALL = 99
+const GEN_MAX = 12
+const genLabel = (g) => (g >= GEN_ALL ? 'все' : g)
+function stepGen(key, delta) {
+  const min = key === 'up' ? 1 : 0
+  const cur = c[key] >= GEN_ALL ? GEN_MAX + 1 : c[key]
+  const next = Math.max(min, cur + delta)
+  c[key] = next > GEN_MAX ? GEN_ALL : next
+}
 const shownCount = computed(() => (c.view === 'timeline' ? timelineSet.value.ids.length : (layout.value?.shown.size ?? 0)))
 const panel = computed(() => prefs.panelOpen && !!tree.selected && $q.screen.gt.sm && c.view !== 'timeline')
 const mobileSheet = ref(true)
@@ -115,7 +136,7 @@ const onlyMe = computed(() => tree.count === 1 && !!tree.focus)
         </button>
       </div>
 
-      <q-btn v-if="c.view === 'tree' || c.view === 'timeline'" flat no-caps dense class="chp__scope" :icon="scope.icon" icon-right="sym_r_keyboard_arrow_down">
+      <q-btn v-if="c.view === 'tree' || c.view === 'timeline'" flat no-caps no-wrap dense class="chp__scope" :icon="scope.icon" icon-right="sym_r_keyboard_arrow_down">
         <span class="ellipsis-1">{{ $q.screen.width >= 1680 ? scope.label : scope.short }}</span>
         <q-menu :offset="[0, 6]">
           <q-list style="min-width: 320px" class="q-py-xs">
@@ -133,19 +154,18 @@ const onlyMe = computed(() => tree.count === 1 && !!tree.focus)
 
       <q-btn v-if="c.view !== 'timeline'" flat no-caps dense class="chp__gens" icon-right="sym_r_keyboard_arrow_down">
         <span class="text-muted gt-sm q-mr-xs">Поколения</span>
-        <span class="tabular"><q-icon name="sym_r_north" size="15px" />{{ c.up }}<template v-if="c.view === 'tree'"> <q-icon name="sym_r_south" size="15px" />{{ c.down }}</template></span>
+        <span class="tabular"><q-icon name="sym_r_north" size="15px" />{{ genLabel(c.up) }}<template v-if="c.view === 'tree'"> <q-icon name="sym_r_south" size="15px" />{{ genLabel(c.down) }}</template></span>
         <q-menu :offset="[0, 6]">
           <div class="chp__gen-menu">
-            <div class="ft-label">Предки (вверх)</div>
-            <div class="chp__gen-row">
-              <button v-for="g in genOptions" :key="'u' + g" type="button" :class="{ active: c.up === g }" @click="c.up = g">{{ g }}</button>
-            </div>
-            <template v-if="c.view === 'tree'">
-              <div class="ft-label q-mt-sm">Потомки (вниз)</div>
-              <div class="chp__gen-row">
-                <button v-for="g in [0, ...genOptions]" :key="'d' + g" type="button" :class="{ active: c.down === g }" @click="c.down = g">{{ g }}</button>
+            <div v-for="row in c.view === 'tree' ? ['up', 'down'] : ['up']" :key="row" class="chp__gen-row">
+              <span class="chp__gen-label"><q-icon :name="row === 'up' ? 'sym_r_north' : 'sym_r_south'" size="16px" />{{ row === 'up' ? 'Предки' : 'Потомки' }}</span>
+              <div class="chp__stepper">
+                <button type="button" :aria-label="`Меньше: ${row === 'up' ? 'предки' : 'потомки'}`" :disabled="c[row] <= (row === 'up' ? 1 : 0)" @click="stepGen(row, -1)">−</button>
+                <span class="tabular">{{ c[row] >= GEN_ALL ? '∞' : c[row] }}</span>
+                <button type="button" :aria-label="`Больше: ${row === 'up' ? 'предки' : 'потомки'}`" :disabled="c[row] >= GEN_ALL" @click="stepGen(row, 1)">+</button>
               </div>
-            </template>
+              <button type="button" class="chp__gen-all" :class="{ active: c[row] >= GEN_ALL }" @click="c[row] = c[row] >= GEN_ALL ? 3 : GEN_ALL">Все</button>
+            </div>
           </div>
         </q-menu>
       </q-btn>
@@ -351,16 +371,15 @@ const onlyMe = computed(() => tree.count === 1 && !!tree.focus)
   background: var(--ft-primary-soft);
 }
 .chp__gen-menu {
-  padding: 12px 14px;
-  width: 290px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
 }
 .chp__gen-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  align-items: center;
+  gap: 10px;
   button {
-    min-width: 34px;
     height: 30px;
     border-radius: 8px;
     border: 1px solid var(--ft-border);
@@ -369,12 +388,41 @@ const onlyMe = computed(() => tree.count === 1 && !!tree.focus)
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
     &.active {
       background: var(--ft-primary);
       border-color: var(--ft-primary);
       color: #fff;
     }
   }
+}
+.chp__gen-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  font-size: 13px;
+  color: var(--ft-text-2);
+}
+.chp__stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  button {
+    width: 30px;
+    font-size: 16px;
+  }
+  span {
+    min-width: 30px;
+    text-align: center;
+    font-weight: 700;
+  }
+}
+.chp__gen-all {
+  padding: 0 12px;
 }
 .chp__focus {
   width: 210px;
@@ -404,6 +452,7 @@ const onlyMe = computed(() => tree.count === 1 && !!tree.focus)
   width: 340px;
   flex: none;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--ft-surface);
   border-left: 1px solid var(--ft-border);
 }

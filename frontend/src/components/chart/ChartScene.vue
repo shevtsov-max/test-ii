@@ -111,6 +111,8 @@ const on = (name, n, e) => {
     <defs>
       <clipPath :id="id('card')"><rect :width="G.W" :height="G.H" :rx="G.R" /></clipPath>
       <clipPath :id="id('av')" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5" /></clipPath>
+      <!-- Силуэт-заглушка не выходит за круг аватара -->
+      <clipPath :id="id('avu')"><circle :cx="G.av / 2" :cy="G.av / 2" :r="G.av / 2 - 0.5" /></clipPath>
       <linearGradient :id="id('home')" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" :stop-color="P.primary2" />
         <stop offset="0.55" :stop-color="P.primary" />
@@ -214,11 +216,11 @@ const on = (name, n, e) => {
             <g v-else @click.stop="on('select', n, $event)" @dblclick.stop="on('open', n, $event)" @contextmenu.prevent.stop="on('context', n, $event)">
               <rect
                 v-if="n.personId === selectedId && interactive"
-                x="-5"
-                y="-5"
-                :width="n.w + 10"
-                :height="n.h + 10"
-                :rx="G.R + 5"
+                x="-2"
+                y="-2"
+                :width="n.w + 4"
+                :height="n.h + 4"
+                :rx="G.R + 2"
                 fill="none"
                 :stroke="P.primary"
                 stroke-opacity="0.35"
@@ -252,7 +254,7 @@ const on = (name, n, e) => {
                   preserveAspectRatio="xMidYMid slice"
                   :clip-path="`url(#${id('av')})`"
                 />
-                <svg v-else :width="G.av" :height="G.av" viewBox="0 0 64 64">
+                <svg v-else :width="G.av" :height="G.av" viewBox="0 0 64 64" :clip-path="`url(#${id('avu')})`">
                   <g :fill="model(n).gender[0]">
                     <template v-if="tree.persons[n.personId].gender === 'F'">
                       <path
@@ -356,7 +358,7 @@ const on = (name, n, e) => {
             <g
               v-if="!locked?.has(n.personId)"
               class="nd__btn nd__btn--add"
-              :class="{ 'nd__btn--show': n.personId === selectedId }" :transform="`translate(${n.w / 2} ${n.h})`" @click.stop="on('add', n, $event)" @pointerdown.stop>
+              :class="{ 'nd__btn--show': n.personId === selectedId }" :transform="`translate(${n.w / 2} ${n.h + 6})`" @click.stop="on('add', n, $event)" @pointerdown.stop>
               <title>Добавить родственника</title>
               <circle r="12" :fill="P.primary" :stroke="P.surface" stroke-width="2" />
               <svg v-if="icon('sym_r_add')" x="-9" y="-9" width="18" height="18" :viewBox="icon('sym_r_add').viewBox">

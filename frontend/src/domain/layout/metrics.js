@@ -3,9 +3,9 @@
  */
 
 const BASE = {
-  compact: { W: 172, H: 64 },
-  normal: { W: 216, H: 86 },
-  detailed: { W: 240, H: 112 },
+  compact: { W: 176, H: 68 },
+  normal: { W: 220, H: 94 },
+  detailed: { W: 244, H: 122 },
 }
 
 /**

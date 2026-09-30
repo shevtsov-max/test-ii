@@ -15,7 +15,7 @@ export const config = {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
-  appName: 'Родословная',
+  appName: 'Прапра',
   version: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev',
   buildTime: typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : '',
   supportEmail: env.VITE_SUPPORT_EMAIL || 'support@example.com',

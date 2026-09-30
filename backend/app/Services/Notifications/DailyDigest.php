@@ -80,7 +80,7 @@ final class DailyDigest
             }
         }
         $lines[] = '';
-        $lines[] = '<a href="'.e(config('rodoslovnaya.frontend_url')).'/#/app">Открыть «Родословную»</a>';
+        $lines[] = '<a href="'.e(config('rodoslovnaya.frontend_url')).'/#/app">Открыть «Прапра»</a>';
 
         return implode("\n", $lines);
     }

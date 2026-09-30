@@ -86,7 +86,7 @@ const year = new Date().getFullYear()
           </div>
         </div>
       </div>
-      <div class="pl__copy text-faint">© {{ year }} Родословная · версия {{ config.version }}</div>
+      <div class="pl__copy text-faint">© {{ year }} Прапра · версия {{ config.version }}</div>
     </footer>
   </div>
 </template>

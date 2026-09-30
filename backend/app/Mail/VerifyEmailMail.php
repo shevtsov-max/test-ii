@@ -18,7 +18,7 @@ class VerifyEmailMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Подтвердите почту — Родословная');
+        return new Envelope(subject: 'Подтвердите почту — Прапра');
     }
 
     public function content(): Content

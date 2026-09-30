@@ -12,7 +12,7 @@ import { generationColor, genderColors } from './palette'
 export function cardGeom(M) {
   const { W, H, density } = M
   if (density === 'compact') {
-    return { W, H, R: 12, av: 36, avX: 10, tx: 54, rel: { size: 10.5, y: 19 }, name: { size: 13, lines: 1, y: 36, lh: 15 }, years: { size: 11, y: 52 }, extra: [] }
+    return { W, H, R: 12, av: 38, avX: 12, tx: 58, rel: { size: 10.5, y: 21 }, name: { size: 13, lines: 1, y: 38, lh: 15 }, years: { size: 11, y: 55 }, extra: [] }
   }
   if (density === 'detailed') {
     return {
@@ -20,18 +20,18 @@ export function cardGeom(M) {
       H,
       R: 14,
       av: 56,
-      avX: 12,
-      tx: 78,
-      rel: { size: 11, y: 21 },
-      name: { size: 14, lines: 2, y: 40, lh: 16.5 },
-      years: { size: 12, y: 74 },
+      avX: 14,
+      tx: 82,
+      rel: { size: 11, y: 24 },
+      name: { size: 14, lines: 2, y: 44, lh: 17 },
+      years: { size: 12, y: 80 },
       extra: [
-        { key: 'place', size: 11.5, y: 90 },
-        { key: 'occ', size: 11.5, y: 104 },
+        { key: 'place', size: 11.5, y: 97 },
+        { key: 'occ', size: 11.5, y: 112 },
       ],
     }
   }
-  return { W, H, R: 14, av: 46, avX: 12, tx: 68, rel: { size: 11, y: 21 }, name: { size: 13.5, lines: 2, y: 39, lh: 16 }, years: { size: 12, y: 73 }, extra: [] }
+  return { W, H, R: 14, av: 48, avX: 14, tx: 74, rel: { size: 11, y: 24 }, name: { size: 13.5, lines: 2, y: 44, lh: 17 }, years: { size: 12, y: 80 }, extra: [] }
 }
 
 /** «* 1868  † 1918 · 50 лет» */
@@ -52,7 +52,7 @@ function yearsLine(p) {
 export function cardModel(p, ctx) {
   const { tree, opts, M, P, relation, row } = ctx
   const g = cardGeom(M)
-  const textW = g.W - g.tx - 12
+  const textW = g.W - g.tx - 16
   const nameFont = font(g.name.size, 600)
   const first = [p.firstName, opts.patronymic ? p.middleName : '', p.suffix].filter(Boolean).join(' ')
   const last = p.lastName || p.birthName

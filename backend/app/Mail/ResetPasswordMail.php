@@ -18,7 +18,7 @@ class ResetPasswordMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Восстановление пароля — Родословная');
+        return new Envelope(subject: 'Восстановление пароля — Прапра');
     }
 
     public function content(): Content

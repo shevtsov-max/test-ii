@@ -149,7 +149,7 @@ export function exportGedcom(t, opts = {}) {
   const L = [
     '0 HEAD',
     '1 SOUR RODOSLOVNAYA',
-    '2 NAME Родословная',
+    '2 NAME Прапра',
     '2 VERS 2.0',
     `1 DATE ${now.getDate()} ${MON[now.getMonth()]} ${now.getFullYear()}`,
     '1 SUBM @U1@',
@@ -161,7 +161,7 @@ export function exportGedcom(t, opts = {}) {
     `1 _TREE ${t.name}`,
   ]
   if (t.homePersonId && iid.has(t.homePersonId)) L.push(`1 _HOME ${iid.get(t.homePersonId)}`)
-  L.push('0 @U1@ SUBM', '1 NAME Родословная')
+  L.push('0 @U1@ SUBM', '1 NAME Прапра')
 
   for (const p of persons) {
     const hide = opts.hideLiving && p.living

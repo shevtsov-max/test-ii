@@ -1,4 +1,4 @@
-# Бэкенд «Родословной» — правила для разработки
+# Бэкенд «Прапра» — правила для разработки
 
 Laravel 13 + Octane (FrankenPHP) + rebing/graphql-laravel + Sanctum, PHP 8.4, MySQL 8.4. Устройство — `README.md`,
 контракт API — `../docs/api/`.

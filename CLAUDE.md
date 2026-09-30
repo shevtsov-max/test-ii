@@ -1,4 +1,7 @@
-# Родословная (family-tree)
+# Прапра (family-tree)
+
+Бренд — «Прапра», домен — praprapra.ru. Знак — `frontend/public/favicon.svg` и `src/components/ui/AppLogo.vue`
+(PNG-иконки PWA — `node scripts/gen-pwa-icons.mjs`). Слово «родословная» как название вида схемы остаётся.
 
 Сервисы: `frontend/` (Vue 3 + JavaScript без TypeScript + Quasar + Pinia + vue-router + Vite, PWA, immer, IndexedDB),
 `backend/` (Laravel 13 + Octane/FrankenPHP + rebing/graphql-laravel + Sanctum, PHP 8.4 — правила в `backend/CLAUDE.md`),

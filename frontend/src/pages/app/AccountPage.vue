@@ -461,7 +461,7 @@ const memberSince = computed(() => (auth.user?.createdAt ? new Date(auth.user.cr
           <div class="auth-note auth-note--positive"><q-icon name="sym_r_check_circle" size="18px" /><span>Приложение установлено и открывается с рабочего стола.</span></div>
         </template>
         <template v-else-if="pwa.installEvent">
-          <p class="ac__p">Установите «Родословную» как приложение: отдельное окно, значок на рабочем столе и работа без интернета.</p>
+          <p class="ac__p">Установите «Прапра» как приложение: отдельное окно, значок на рабочем столе и работа без интернета.</p>
           <div><q-btn unelevated no-caps color="primary" icon="sym_r_install_desktop" label="Установить приложение" @click="pwa.install()" /></div>
         </template>
         <template v-else-if="isIos">

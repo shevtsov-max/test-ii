@@ -28,8 +28,8 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.svg', 'icons/*.png', 'photos/*.svg'],
         manifest: {
           id: './',
-          name: 'Родословная — семейное древо',
-          short_name: 'Родословная',
+          name: 'Прапра — семейное древо',
+          short_name: 'Прапра',
           description: 'Составляйте родословную: древо, персоны, события, документы и росписи. Работает без интернета.',
           lang: 'ru',
           dir: 'ltr',
