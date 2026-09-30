@@ -21,7 +21,7 @@ const genLabel = computed(() => {
 })
 
 function pick(id) {
-  store.setFocus(id)
+  store.buildFrom(id)
 }
 </script>
 
@@ -54,7 +54,14 @@ function pick(id) {
       </q-list>
     </q-btn-dropdown>
 
-    <PersonSelect class="vt__search" dense :model-value="null" @pick="pick" />
+    <PersonSelect
+      class="vt__search"
+      dense
+      icon="sym_r_account_tree"
+      placeholder="Построить дерево от…"
+      :model-value="store.focusId"
+      @pick="pick"
+    />
 
     <q-btn flat round dense icon="sym_r_tune" class="text-muted">
       <q-tooltip>Настройки отображения</q-tooltip>

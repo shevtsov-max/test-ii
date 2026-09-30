@@ -160,9 +160,9 @@ const factIcon = (type) => FACT_TYPES.find((f) => f.value === type)?.icon ?? 'sy
               flat
               no-caps
               size="sm"
-              icon="sym_r_center_focus_strong"
-              label="В центр древа"
-              @click="store.setFocus(p.id); open = false"
+              icon="sym_r_account_tree"
+              label="Дерево от него"
+              @click="store.buildFrom(p.id); open = false"
             />
             <q-btn flat round size="sm" icon="sym_r_delete" color="negative" @click="actions.remove(p.id, () => (open = false))">
               <q-tooltip>Удалить персону</q-tooltip>
@@ -351,9 +351,9 @@ const factIcon = (type) => FACT_TYPES.find((f) => f.value === type)?.icon ?? 'sy
                     <q-btn flat round dense size="sm" icon="sym_r_more_vert" @click.stop>
                       <q-menu>
                         <q-list dense style="min-width: 220px">
-                          <q-item v-close-popup clickable @click="store.setFocus(r.id); open = false">
+                          <q-item v-close-popup clickable @click="store.buildFrom(r.id); open = false">
                             <q-item-section avatar><q-icon name="sym_r_center_focus_strong" /></q-item-section>
-                            <q-item-section>В центр древа</q-item-section>
+                            <q-item-section>Построить дерево от него</q-item-section>
                           </q-item>
                           <q-item v-if="r.familyId" v-close-popup clickable @click="ui.editFamily(r.familyId)">
                             <q-item-section avatar><q-icon name="sym_r_favorite" /></q-item-section>

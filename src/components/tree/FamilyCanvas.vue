@@ -24,6 +24,7 @@ const MAX_K = 2.2
 
 const size = ref({ w: 800, h: 600 })
 let ro
+let sized = false
 
 // ------------------------------------------------------------------ view helpers
 function animate(fn, ms = 450) {
@@ -49,8 +50,13 @@ function nodeCenter(n) {
   return { x: n.x + shift.value.x, y: (n.top ?? 0) + n.h / 2 + shift.value.y }
 }
 
+// Пока пользователь сам не двигал камеру, при любом изменении размера холста (панель, поворот экрана,
+// адресная строка на телефоне) центральная персона остаётся по центру.
+let userMoved = false
+
 function centerFocus(smooth = true, ms = 450) {
   const f = props.layout.focusNode
+  userMoved = false
   if (f) {
     const c = nodeCenter(f)
     centerOn(c.x, c.y, k.value, smooth, ms)
@@ -65,6 +71,7 @@ function fit(smooth = true) {
     minY: sb.minY + shift.value.y,
     maxY: sb.maxY + shift.value.y,
   }
+  userMoved = true
   const pad = 80
   const w = b.maxX - b.minX + pad * 2
   const h = b.maxY - b.minY + pad * 2
@@ -73,6 +80,7 @@ function fit(smooth = true) {
 }
 
 function zoomAt(factor, px = size.value.w / 2, py = size.value.h / 2, smooth = false) {
+  userMoved = true
   const nk = Math.min(MAX_K, Math.max(MIN_K, k.value * factor))
   const apply = () => {
     tx.value = px - ((px - tx.value) * nk) / k.value
@@ -129,12 +137,14 @@ function onPointerMove(e) {
     ty.value = cy - ((pinchStart.cy - pinchStart.ty) * nk) / pinchStart.k
     k.value = nk
     moved = true
+    userMoved = true
   } else if (panStart) {
     const dx = p.x - panStart.x
     const dy = p.y - panStart.y
     if (!moved && Math.hypot(dx, dy) < 4) return
     if (!moved) {
       moved = true
+      userMoved = true
       dragging.value = true
       root.value?.setPointerCapture(e.pointerId)
     }
@@ -161,6 +171,7 @@ function onWheel(e) {
   const p = local(e)
   const isTrackpadPan = !e.ctrlKey && e.deltaMode === 0 && (Math.abs(e.deltaX) > 0.5 || Math.abs(e.deltaY) < 40)
   if (isTrackpadPan) {
+    userMoved = true
     tx.value -= e.deltaX
     ty.value -= e.deltaY
     return
@@ -171,6 +182,12 @@ function onWheel(e) {
 }
 
 // ------------------------------------------------------------------ keyboard
+function pan(dx, dy) {
+  userMoved = true
+  tx.value += dx
+  ty.value += dy
+}
+
 function onKey(e) {
   const tag = e.target?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return
@@ -179,10 +196,10 @@ function onKey(e) {
   else if (e.key === '-' || e.key === '_') zoomAt(1 / 1.2, undefined, undefined, true)
   else if (e.key === '0') centerOn(nodeCenter(props.layout.focusNode).x, nodeCenter(props.layout.focusNode).y, 1)
   else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey) fit()
-  else if (e.key === 'ArrowLeft') tx.value += 80
-  else if (e.key === 'ArrowRight') tx.value -= 80
-  else if (e.key === 'ArrowUp') ty.value += 80
-  else if (e.key === 'ArrowDown') ty.value -= 80
+  else if (e.key === 'ArrowLeft') pan(80, 0)
+  else if (e.key === 'ArrowRight') pan(-80, 0)
+  else if (e.key === 'ArrowUp') pan(0, 80)
+  else if (e.key === 'ArrowDown') pan(0, -80)
   else return
   e.preventDefault()
 }
@@ -190,10 +207,13 @@ function onKey(e) {
 // ------------------------------------------------------------------ lifecycle
 onMounted(() => {
   ro = new ResizeObserver(([entry]) => {
-    const first = size.value.w === 800 && size.value.h === 600
+    const first = !sized
+    sized = true
     size.value = { w: entry.contentRect.width, h: entry.contentRect.height }
     if (first) {
       k.value = size.value.w < 700 ? 0.7 : 1
+      centerFocus(false)
+    } else if (!userMoved) {
       centerFocus(false)
     }
   })

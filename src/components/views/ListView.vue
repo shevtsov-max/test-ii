@@ -152,8 +152,8 @@ function exportCsv() {
         </template>
         <template #body-cell-actions="props">
           <q-td :props="props" auto-width>
-            <q-btn flat round dense size="sm" icon="sym_r_center_focus_strong" @click.stop="store.setFocus(props.row.id); store.ui.view = 'family'">
-              <q-tooltip>Показать в древе</q-tooltip>
+            <q-btn flat round dense size="sm" icon="sym_r_account_tree" :color="store.focusId === props.row.id ? 'primary' : undefined" @click.stop="store.buildFrom(props.row.id)">
+              <q-tooltip>{{ store.focusId === props.row.id ? 'Дерево построено от этого человека' : 'Построить дерево от этого человека' }}</q-tooltip>
             </q-btn>
             <q-btn flat round dense size="sm" icon="sym_r_badge" @click.stop="ui.openProfile(props.row.id)">
               <q-tooltip>Профиль</q-tooltip>
@@ -176,6 +176,7 @@ function exportCsv() {
                   {{ formatDate(props.row.birth.date) }} {{ props.row.birth.place }} · {{ store.relationToHome(props.row.id) }}
                 </div>
               </div>
+              <q-btn flat round dense icon="sym_r_account_tree" :color="store.focusId === props.row.id ? 'primary' : undefined" @click.stop="store.buildFrom(props.row.id)" />
               <q-btn flat round dense icon="sym_r_edit" @click.stop="ui.editPerson(props.row.id)" />
             </q-card>
           </div>

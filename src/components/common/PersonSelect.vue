@@ -13,6 +13,7 @@ const props = defineProps({
   clearable: Boolean,
   autofocus: Boolean,
   rounded: Boolean,
+  icon: { type: String, default: 'sym_r_search' },
 })
 const emit = defineEmits(['update:modelValue', 'pick'])
 const store = useTreeStore()
@@ -69,7 +70,7 @@ function onUpdate(v) {
     @update:model-value="onUpdate"
   >
     <template #prepend>
-      <q-icon name="sym_r_search" size="20px" />
+      <q-icon :name="icon" size="20px" />
     </template>
     <template #option="scope">
       <q-item v-bind="scope.itemProps" dense>

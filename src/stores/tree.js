@@ -157,6 +157,12 @@ export const useTreeStore = defineStore('tree', () => {
     focusId.value = id
     if (select) selectedId.value = id
   }
+  /** Построить дерево от человека: он становится центром, и открывается вид «Семейное древо». */
+  function buildFrom(id) {
+    if (!tree.value.persons[id]) return
+    ui.value.view = 'family'
+    setFocus(id)
+  }
   function select(id) {
     selectedId.value = id
   }
@@ -438,6 +444,7 @@ export const useTreeStore = defineStore('tree', () => {
     avatarOf,
     // actions
     setFocus,
+    buildFrom,
     select,
     setHome,
     renameTree,

@@ -84,8 +84,8 @@ function deathLine() {
             <span class="pp__sym">✱</span> {{ birthLine() }}
           </div>
           <div v-if="!p.living" class="pp__life"><span class="pp__sym">✝</span> {{ deathLine() }}</div>
-          <button v-if="store.focusId !== p.id" class="pp__link" @click="store.setFocus(p.id)">
-            Показать в центре древа <q-icon name="sym_r_chevron_right" size="16px" />
+          <button v-if="store.focusId !== p.id" class="pp__link" @click="store.buildFrom(p.id)">
+            Построить дерево от него <q-icon name="sym_r_chevron_right" size="16px" />
           </button>
           <button v-else class="pp__link" @click="ui.openProfile(p.id)">
             Открыть профиль <q-icon name="sym_r_chevron_right" size="16px" />
@@ -108,9 +108,9 @@ function deathLine() {
           <span><q-icon name="sym_r_more_horiz" size="20px" /></span>Больше
           <q-menu anchor="bottom middle" self="top middle">
             <q-list style="min-width: 250px">
-              <q-item v-close-popup clickable @click="store.setFocus(p.id)">
-                <q-item-section avatar><q-icon name="sym_r_center_focus_strong" /></q-item-section>
-                <q-item-section>Сделать центральной персоной</q-item-section>
+              <q-item v-close-popup clickable :disable="store.focusId === p.id" @click="store.buildFrom(p.id)">
+                <q-item-section avatar><q-icon name="sym_r_account_tree" /></q-item-section>
+                <q-item-section>Построить дерево от этого человека</q-item-section>
               </q-item>
               <q-item v-close-popup clickable :disable="!!isHome" @click="actions.setHome(p.id)">
                 <q-item-section avatar><q-icon name="sym_r_home" /></q-item-section>
@@ -203,8 +203,8 @@ function deathLine() {
                 </q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-btn flat round dense size="sm" icon="sym_r_center_focus_strong" @click.stop="store.setFocus(r.id)">
-                  <q-tooltip>В центр древа</q-tooltip>
+                <q-btn flat round dense size="sm" icon="sym_r_center_focus_strong" @click.stop="store.buildFrom(r.id)">
+                  <q-tooltip>Построить дерево от него</q-tooltip>
                 </q-btn>
               </q-item-section>
             </q-item>
