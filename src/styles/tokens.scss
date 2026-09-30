@@ -1,0 +1,123 @@
+// Дизайн-токены. Светлая тема — по умолчанию, тёмная — body.body--dark (Quasar Dark).
+// В компонентах используйте только переменные --ft-*: так тема переключается без правок.
+
+:root {
+  // Бренд
+  --ft-primary: #d24e26;
+  --ft-primary-hover: #b93f1b;
+  --ft-primary-soft: #fbece5;
+  --ft-primary-text: #b3421e;
+  --ft-accent: #2e7d64;
+  --ft-accent-soft: #e2f1eb;
+
+  // Поверхности
+  --ft-bg: #f6f4f0;
+  --ft-canvas: #f1eee8;
+  --ft-dot: #dcd7cd;
+  --ft-surface: #ffffff;
+  --ft-surface-2: #f9f8f5;
+  --ft-surface-3: #f1efea;
+  --ft-sidebar: #fbfaf7;
+  --ft-border: #e6e2da;
+  --ft-border-strong: #d3cec3;
+  --ft-overlay: rgba(20, 22, 26, 0.5);
+
+  // Текст
+  --ft-text: #1d2330;
+  --ft-text-2: #404857;
+  --ft-muted: #6b7280;
+  --ft-faint: #9aa0a9;
+
+  // Линии древа
+  --ft-line: #aaa396;
+  --ft-line-strong: #857e70;
+
+  // Пол
+  --ft-male: #2f74c0;
+  --ft-male-soft: #e5eef9;
+  --ft-female: #cc4a78;
+  --ft-female-soft: #fae7ee;
+  --ft-unknown: #7c8594;
+  --ft-unknown-soft: #edeff2;
+
+  // Состояния
+  --ft-positive: #2e9d62;
+  --ft-positive-soft: #e3f4ea;
+  --ft-warning: #c98712;
+  --ft-warning-soft: #fcf1dc;
+  --ft-negative: #d63b3b;
+  --ft-negative-soft: #fce8e8;
+  --ft-info: #2f7fc2;
+  --ft-info-soft: #e5f0fa;
+
+  // Тени и радиусы
+  --ft-shadow-xs: 0 1px 2px rgba(28, 24, 18, 0.06);
+  --ft-shadow: 0 1px 2px rgba(28, 24, 18, 0.05), 0 4px 14px rgba(28, 24, 18, 0.06);
+  --ft-shadow-lg: 0 12px 32px rgba(28, 24, 18, 0.14), 0 2px 6px rgba(28, 24, 18, 0.06);
+  --ft-radius-sm: 8px;
+  --ft-radius: 12px;
+  --ft-radius-lg: 16px;
+  --ft-radius-xl: 22px;
+
+  // Шрифты
+  --ft-font: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ft-font-display: 'Lora Variable', 'Lora', Georgia, 'Times New Roman', serif;
+
+  // Размеры каркаса
+  --ft-header-h: 56px;
+  --ft-sidebar-w: 248px;
+  --ft-sidebar-w-collapsed: 68px;
+  --ft-ease: cubic-bezier(0.22, 0.8, 0.26, 1);
+
+  color-scheme: light;
+}
+
+body.body--dark {
+  --ft-primary: #f0693e;
+  --ft-primary-hover: #ff7d53;
+  --ft-primary-soft: #3a2119;
+  --ft-primary-text: #ff8a62;
+  --ft-accent: #4fb592;
+  --ft-accent-soft: #17332a;
+
+  --ft-bg: #0f1216;
+  --ft-canvas: #11151a;
+  --ft-dot: #232a33;
+  --ft-surface: #171b21;
+  --ft-surface-2: #1c2128;
+  --ft-surface-3: #232931;
+  --ft-sidebar: #13171c;
+  --ft-border: #2a313b;
+  --ft-border-strong: #3a4250;
+  --ft-overlay: rgba(0, 0, 0, 0.6);
+
+  --ft-text: #e8ebf0;
+  --ft-text-2: #c5cbd5;
+  --ft-muted: #98a2b3;
+  --ft-faint: #6b7483;
+
+  --ft-line: #5b6576;
+  --ft-line-strong: #8792a4;
+
+  --ft-male: #5c9de6;
+  --ft-male-soft: #16283d;
+  --ft-female: #e5709a;
+  --ft-female-soft: #3a1c28;
+  --ft-unknown: #8e97a5;
+  --ft-unknown-soft: #242a33;
+
+  --ft-positive: #4cc585;
+  --ft-positive-soft: #15301f;
+  --ft-warning: #e8a93b;
+  --ft-warning-soft: #33280f;
+  --ft-negative: #f06565;
+  --ft-negative-soft: #3a1818;
+  --ft-info: #5ea8e8;
+  --ft-info-soft: #152a3d;
+
+  --ft-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ft-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.3);
+  --ft-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  color-scheme: dark;
+}

@@ -1,0 +1,490 @@
+# GraphQL API «Родословной» — контракт между фронтендом и будущим сервером.
+#
+# Фронтенд уже умеет работать с этим API: достаточно собрать его с VITE_API_MODE=graphql
+# и VITE_GRAPHQL_URL=<адрес> (см. .env.example). Запросы — src/api/graphql/operations.js,
+# адаптер — src/api/graphql/index.js.
+#
+# Принципы:
+#  • Типы повторяют модель древа (src/domain/types.js) — ответы используются без преобразований.
+#  • Значения перечислений совпадают со значениями констант в src/domain/model.js и src/domain/dates.js
+#    (поэтому они в нижнем регистре).
+#  • Идентификаторы сущностей древа создаёт клиент (uid), сервер их принимает как есть:
+#    это позволяет работать офлайн и отправлять изменения пачками.
+#  • Сохранение — только изменённые сущности (applyTreeChanges) с оптимистической блокировкой по version.
+#  • Время — миллисекунды Unix (Timestamp).
+#  • Ошибки: extensions.code = UNAUTHENTICATED | FORBIDDEN | NOT_FOUND | VALIDATION | CONFLICT | INTERNAL,
+#    для VALIDATION — extensions.fields: { имяПоля: "текст ошибки" } (показываются под полями формы).
+#  • Авторизация: заголовок Authorization: Bearer <accessToken>; при UNAUTHENTICATED клиент
+#    один раз вызывает refreshToken и повторяет запрос.
+
+scalar JSON
+scalar Timestamp
+
+# ------------------------------------------------------------------ учётные записи
+
+type User {
+  id: ID!
+  email: String!
+  name: String!
+  "URL или data:-изображение 256×256"
+  avatar: String
+  emailVerified: Boolean!
+  createdAt: Timestamp!
+}
+
+type AuthPayload {
+  accessToken: String!
+  refreshToken: String!
+  user: User!
+}
+
+input RegisterInput {
+  name: String!
+  email: String!
+  "Не короче 8 символов, буквы и цифры (src/utils/password.js)"
+  password: String!
+}
+
+input ProfileInput {
+  name: String
+  "Смена почты сбрасывает emailVerified и отправляет письмо для подтверждения"
+  email: String
+  "null — удалить фото"
+  avatar: String
+}
+
+# ------------------------------------------------------------------ древо: общие типы
+
+enum Gender {
+  M
+  F
+  U
+}
+
+enum DateQualifier {
+  exact
+  about
+  estimated
+  calculated
+  before
+  after
+  between
+}
+
+enum Calendar {
+  gregorian
+  julian
+}
+
+"Дата с точностью: известен только год, «около 1850», «между 1880 и 1885», старый стиль, произвольный текст"
+type GDate {
+  qualifier: DateQualifier!
+  day: Int
+  month: Int
+  year: Int
+  "Вторая граница для qualifier = between"
+  day2: Int
+  month2: Int
+  year2: Int
+  calendar: Calendar
+  "Исходный текст, если дату не удалось разобрать («весной после войны»)"
+  text: String
+}
+
+"Ссылка на источник. quality: 3 — прямое свидетельство, 2 — косвенное, 1 — сомнительное, 0 — ненадёжное"
+type Citation {
+  id: ID!
+  sourceId: ID!
+  page: String!
+  quality: Int!
+  note: String!
+}
+
+type LifePoint {
+  date: GDate!
+  placeId: ID
+  citations: [Citation!]!
+}
+
+type DeathPoint {
+  date: GDate!
+  placeId: ID
+  citations: [Citation!]!
+  cause: String!
+}
+
+enum EventType {
+  baptism
+  education
+  occupation
+  residence
+  military
+  award
+  emigration
+  immigration
+  census
+  religion
+  nationality
+  namechange
+  illness
+  burial
+  custom
+}
+
+type LifeEvent {
+  id: ID!
+  type: EventType!
+  "Название для type = custom"
+  title: String!
+  date: GDate!
+  placeId: ID
+  description: String!
+  citations: [Citation!]!
+}
+
+enum Privacy {
+  public
+  family
+  private
+}
+
+type Person {
+  id: ID!
+  gender: Gender!
+  firstName: String!
+  middleName: String!
+  lastName: String!
+  "Фамилия при рождении (девичья)"
+  birthName: String!
+  nickname: String!
+  "Титул, звание: «Император», «Кн.», «Протоиерей»"
+  title: String!
+  "Порядковый номер или уточнение: «II», «старший»"
+  suffix: String!
+  clanId: ID
+  living: Boolean!
+  birth: LifePoint!
+  death: DeathPoint!
+  residencePlaceId: ID
+  occupation: String!
+  email: String!
+  phone: String!
+  "id записи Media — главное фото"
+  avatarId: ID
+  note: String!
+  biography: String!
+  events: [LifeEvent!]!
+  "Значения дополнительных полей: { [CustomFieldDef.id]: string }"
+  custom: JSON!
+  citations: [Citation!]!
+  favorite: Boolean!
+  privacy: Privacy!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+}
+
+enum FamilyStatus {
+  married
+  partners
+  engaged
+  separated
+  divorced
+  widowed
+  unknown
+}
+
+"Связь ребёнка с семьёй; по умолчанию birth (кровный)"
+enum ChildLink {
+  birth
+  adopted
+  foster
+  step
+  guardian
+  unknown
+}
+
+"Семья — пара (или один родитель) и дети. У человека может быть несколько семей-родителей и семей-браков."
+type Family {
+  id: ID!
+  "0–2 партнёра; порядок не важен"
+  partners: [ID!]!
+  status: FamilyStatus!
+  marriage: LifePoint!
+  divorce: LifePoint!
+  "Порядок детей — порядок рождения, заданный пользователем"
+  children: [ID!]!
+  "{ [childId]: ChildLink } — только для неродных детей"
+  childLinks: JSON!
+  note: String!
+  citations: [Citation!]!
+}
+
+enum PlaceType {
+  country
+  region
+  district
+  city
+  village
+  address
+  church
+  cemetery
+  other
+}
+
+"Справочник мест с иерархией: страна → губерния → уезд → город"
+type Place {
+  id: ID!
+  name: String!
+  type: PlaceType!
+  parentId: ID
+  lat: Float
+  lng: Float
+  "Другие и исторические названия через запятую"
+  altNames: String!
+  note: String!
+}
+
+enum MediaKind {
+  photo
+  document
+  audio
+  video
+  other
+}
+
+"Файл (фото, скан документа). Один файл может относиться к нескольким людям."
+type Media {
+  id: ID!
+  kind: MediaKind!
+  title: String!
+  description: String!
+  date: GDate!
+  placeId: ID
+  personIds: [ID!]!
+  sourceId: ID
+  "URL файла в хранилище"
+  src: String
+  "URL миниатюры (~240px)"
+  thumb: String
+  mime: String!
+  size: Int!
+  createdAt: Timestamp!
+}
+
+enum SourceType {
+  metric
+  revision
+  census
+  archive
+  document
+  book
+  website
+  oral
+  other
+}
+
+type Source {
+  id: ID!
+  title: String!
+  type: SourceType!
+  author: String!
+  "Архив, библиотека"
+  repository: String!
+  "Шифр: фонд, опись, дело"
+  callNumber: String!
+  url: String!
+  date: GDate!
+  note: String!
+}
+
+"Род — ветвь фамилии, которой отмечают персон и раскрашивают древо"
+type Clan {
+  id: ID!
+  name: String!
+  color: String!
+  description: String!
+}
+
+enum CustomFieldType {
+  text
+  number
+  date
+  url
+}
+
+type CustomFieldDef {
+  id: ID!
+  label: String!
+  type: CustomFieldType!
+}
+
+# ------------------------------------------------------------------ древо
+
+"Роль пользователя в древе"
+enum TreeRole {
+  owner
+  editor
+  viewer
+}
+
+type Tree {
+  id: ID!
+  name: String!
+  description: String!
+  homePersonId: ID
+  "Растёт при каждом сохранении; передаётся в applyTreeChanges как baseVersion"
+  version: Float!
+  role: TreeRole!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  customFields: [CustomFieldDef!]!
+  persons: [Person!]!
+  families: [Family!]!
+  places: [Place!]!
+  media: [Media!]!
+  sources: [Source!]!
+  clans: [Clan!]!
+}
+
+"Карточка древа на странице «Мои древа»"
+type TreeSummary {
+  id: ID!
+  name: String!
+  description: String!
+  persons: Int!
+  families: Int!
+  media: Int!
+  "Имя и миниатюра персоны «Это Вы»"
+  homeName: String
+  homeThumb: String
+  homeGender: Gender
+  role: TreeRole!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+}
+
+input CreateTreeInput {
+  name: String!
+  description: String
+  "Полные данные древа (импорт, пример, мастер «Новое древо») в формате TreeData из src/domain/types.js"
+  data: JSON
+}
+
+input TreeInfoInput {
+  name: String
+  description: String
+  homePersonId: ID
+  customFields: JSON
+}
+
+"""
+Изменения древа с момента baseVersion. Сущности передаются целиком (upsert) или по id (delete).
+Формат сущностей — как в типах выше (JSON, чтобы не дублировать все input-типы).
+Если baseVersion не совпадает с текущей версией и затронуты те же сущности, сервер отвечает CONFLICT —
+клиент перечитает древо и покажет пользователю, что данные изменились на другом устройстве.
+"""
+input TreeChangesInput {
+  baseVersion: Float
+  tree: TreeInfoInput
+  "Полная замена содержимого древа (импорт в существующее древо)"
+  replace: JSON
+  upsertPersons: [JSON!]
+  deletePersons: [ID!]
+  upsertFamilies: [JSON!]
+  deleteFamilies: [ID!]
+  upsertPlaces: [JSON!]
+  deletePlaces: [ID!]
+  upsertMedia: [JSON!]
+  deleteMedia: [ID!]
+  upsertSources: [JSON!]
+  deleteSources: [ID!]
+  upsertClans: [JSON!]
+  deleteClans: [ID!]
+}
+
+type SaveResult {
+  version: Float!
+  updatedAt: Timestamp!
+}
+
+"Подписанная ссылка для загрузки файла напрямую в объектное хранилище (S3-совместимое)"
+type Upload {
+  "PUT сюда тело файла"
+  uploadUrl: String!
+  "Постоянный адрес файла после загрузки"
+  fileUrl: String!
+  "Адрес миниатюры (сервер создаёт её после загрузки изображения)"
+  thumbUrl: String
+  "Дополнительные заголовки для PUT"
+  headers: JSON
+}
+
+# ------------------------------------------------------------------ совместный доступ
+
+enum MemberStatus {
+  pending
+  active
+}
+
+type TreeMember {
+  id: ID!
+  role: TreeRole!
+  "null, пока приглашение не принято"
+  user: User
+  invitedEmail: String
+  status: MemberStatus!
+  createdAt: Timestamp!
+}
+
+type PublicLink {
+  "Ссылка только для просмотра; null, если выключена"
+  url: String
+  enabled: Boolean!
+}
+
+# ------------------------------------------------------------------ запросы и мутации
+
+type Query {
+  "Текущий пользователь или null"
+  me: User
+  trees: [TreeSummary!]!
+  tree(id: ID!): Tree
+  treeMembers(treeId: ID!): [TreeMember!]!
+}
+
+type Mutation {
+  # Вход и регистрация
+  login(email: String!, password: String!): AuthPayload!
+  register(input: RegisterInput!): AuthPayload!
+  refreshToken(refreshToken: String!): AuthPayload!
+  logout(refreshToken: String): Boolean!
+  "Всегда true — не раскрываем, зарегистрирован ли адрес. Письмо со ссылкой #/reset-password?token=…"
+  requestPasswordReset(email: String!): Boolean!
+  resetPassword(token: String!, password: String!): AuthPayload!
+  "Ссылка из письма: #/verify-email?token=…"
+  verifyEmail(token: String!): Boolean!
+  resendVerificationEmail: Boolean!
+  updateProfile(input: ProfileInput!): User!
+  changePassword(current: String!, next: String!): Boolean!
+  "Удаляет пользователя и все древа, где он единственный владелец"
+  deleteAccount(password: String!): Boolean!
+
+  # Древа
+  createTree(input: CreateTreeInput!): TreeSummary!
+  applyTreeChanges(treeId: ID!, changes: TreeChangesInput!): SaveResult!
+  deleteTree(id: ID!): Boolean!
+
+  # Файлы
+  createUpload(treeId: ID!, filename: String!, mime: String!, size: Int!): Upload!
+
+  # Совместный доступ (только владелец)
+  inviteMember(treeId: ID!, email: String!, role: TreeRole!): TreeMember!
+  updateMember(memberId: ID!, role: TreeRole!): TreeMember!
+  removeMember(memberId: ID!): Boolean!
+  setPublicLink(treeId: ID!, enabled: Boolean!): PublicLink!
+}
+
+# Вход через внешние сервисы (VITE_OAUTH_PROVIDERS=google,vk,yandex) — не GraphQL:
+#   GET <сервер>/auth/<provider>?redirect=<адрес приложения>
+# После входа сервер перенаправляет обратно на адрес redirect, добавив параметр ?refreshToken=<токен>
+# (до «#»). Клиент сохраняет токен, убирает его из адреса и получает сессию мутацией refreshToken.

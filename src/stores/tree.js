@@ -1,469 +1,434 @@
 import { defineStore } from 'pinia'
-import { computed, ref, watch } from 'vue'
-import { shevtsovTree, demoTree, emptyTree } from '@/data/seed'
-import { romanovTree } from '@/data/romanovs'
-import { newFamily, newPerson, uid } from '@/utils/person'
-import * as G from '@/utils/graph'
+import { computed, ref, shallowRef, watch } from 'vue'
+import { enablePatches, freeze, produceWithPatches } from 'immer'
+import { api, ApiError, errorMessage } from '@/api'
+import { changesToInput, collectChanges, COLLECTIONS, emptyChanges, hasChanges } from '@/api/changes'
+import * as A from '@/domain/actions'
+import { FamilyGraph } from '@/domain/graph'
+import { relationship } from '@/domain/kinship'
+import { ensurePlace, findPlaceByName } from '@/domain/places'
+import { useAuthStore } from './auth'
+import { useTreesStore } from './trees'
 
-const LS_TREE = 'ft:tree:v1'
-const LS_UI = 'ft:ui:v1'
-/** Версия сохранённых настроек: 2 — подписи родства на карточках включены по умолчанию */
-const UI_VERSION = 2
-const HISTORY_LIMIT = 60
+enablePatches()
 
-function load(key) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
+const HISTORY_LIMIT = 80
+const SAVE_DELAY = 500
+const VIEW_KEY = (id) => `rd:view:${id}`
 
+/**
+ * Открытое древо: данные (неизменяемые, через immer), граф связей, отмена/повтор,
+ * автосохранение через api, выбранная и центральная персоны.
+ *
+ * Все изменения идут через `commit(label, recipe)` или действия ниже — так работают
+ * отмена, сохранение и синхронизация с сервером.
+ */
 export const useTreeStore = defineStore('tree', () => {
-  const tree = ref(load(LS_TREE) ?? romanovTree())
-  const savedUi = load(LS_UI) ?? {}
+  const auth = useAuthStore()
+  const treesStore = useTreesStore()
 
-  const ui = ref({
-    generations: 4,
-    placeholders: true,
-    showPhotos: true,
-    showYears: true,
-    showRelation: true,
-    siblings: true,
-    compact: false,
-    dark: false,
-    panelOpen: true,
-    view: 'family',
-    ...savedUi,
-    ...((savedUi.uiVersion ?? 1) < UI_VERSION ? { showRelation: true } : {}),
-    uiVersion: UI_VERSION,
-  })
+  const treeId = ref(null)
+  /** @type {import('vue').ShallowRef<import('@/domain/types').TreeData | null>} */
+  const tree = shallowRef(null)
+  const role = ref('owner')
+  const status = ref('idle')
+  const error = ref(null)
+  const saveState = ref('saved')
+  const saveError = ref('')
+  const lastSavedAt = ref(null)
+  const version = ref(null)
 
-  const firstId = () => tree.value.homePersonId ?? Object.keys(tree.value.persons)[0] ?? null
-  const focusId = ref(savedUi.focusId && tree.value.persons[savedUi.focusId] ? savedUi.focusId : firstId())
-  const selectedId = ref(savedUi.selectedId && tree.value.persons[savedUi.selectedId] ? savedUi.selectedId : focusId.value)
+  const past = shallowRef([])
+  const future = shallowRef([])
 
-  // ---------------------------------------------------------------- persistence
-  let saveTimer
-  const lastSaved = ref(Date.now())
-  const saveError = ref(null)
-  watch(
-    tree,
-    () => {
-      clearTimeout(saveTimer)
-      saveTimer = setTimeout(() => {
-        try {
-          localStorage.setItem(LS_TREE, JSON.stringify(tree.value))
-          lastSaved.value = Date.now()
-          saveError.value = null
-        } catch (e) {
-          saveError.value = 'Не удалось сохранить: хранилище браузера переполнено (слишком много фото?)'
-          console.error(e)
-        }
-      }, 250)
-    },
-    { deep: true },
-  )
-  watch(
-    [ui, focusId, selectedId],
-    () => {
-      try {
-        localStorage.setItem(LS_UI, JSON.stringify({ ...ui.value, focusId: focusId.value, selectedId: selectedId.value }))
-      } catch {
-        /* ignore */
-      }
-    },
-    { deep: true },
-  )
+  const focusId = ref(null)
+  const selectedId = ref(null)
+  const recent = ref([])
+  /** История центра древа — кнопки «Назад» и «Вперёд» */
+  const focusHistory = ref({ back: [], forward: [] })
 
-  // ---------------------------------------------------------------- history
-  const past = ref([])
-  const future = ref([])
+  const graph = computed(() => (tree.value ? new FamilyGraph(tree.value) : null))
+  const readonly = computed(() => role.value === 'viewer')
   const canUndo = computed(() => past.value.length > 0)
   const canRedo = computed(() => future.value.length > 0)
+  const undoLabel = computed(() => past.value.at(-1)?.label ?? '')
+  const redoLabel = computed(() => future.value.at(-1)?.label ?? '')
 
-  function snapshot() {
-    past.value.push(JSON.stringify(tree.value))
-    if (past.value.length > HISTORY_LIMIT) past.value.shift()
-    future.value = []
-  }
-  function restore(raw) {
-    tree.value = JSON.parse(raw)
-    if (!focusId.value || !tree.value.persons[focusId.value]) focusId.value = firstId()
-    if (!selectedId.value || !tree.value.persons[selectedId.value]) selectedId.value = focusId.value
-  }
-  function undo() {
-    const prev = past.value.pop()
-    if (!prev) return
-    future.value.push(JSON.stringify(tree.value))
-    restore(prev)
-  }
-  function redo() {
-    const next = future.value.pop()
-    if (!next) return
-    past.value.push(JSON.stringify(tree.value))
-    restore(next)
-  }
-
-  // ---------------------------------------------------------------- getters
-  const persons = computed(() => Object.values(tree.value.persons))
+  const persons = computed(() => (tree.value ? Object.values(tree.value.persons) : []))
   const count = computed(() => persons.value.length)
-  const focus = computed(() => (focusId.value ? tree.value.persons[focusId.value] : undefined))
-  const selected = computed(() => (selectedId.value ? tree.value.persons[selectedId.value] : undefined))
-  const homeId = computed(() => tree.value.homePersonId)
+  const homeId = computed(() => tree.value?.homePersonId ?? null)
+  const person = (id) => (id && tree.value ? tree.value.persons[id] : undefined)
+  const family = (id) => (id && tree.value ? tree.value.families[id] : undefined)
+  const focus = computed(() => person(focusId.value))
+  const selected = computed(() => person(selectedId.value))
+  /** Кем персона приходится «Вам» (домашней персоне). */
+  const relationToHome = (id) => (graph.value && homeId.value ? relationship(graph.value, homeId.value, id) : '')
 
-  const person = (id) => (id ? tree.value.persons[id] : undefined)
-  const parentsOf = (id) => G.parentsOf(tree.value, id)
-  const partnersOf = (id) => G.partnersOf(tree.value, id)
-  const childrenOf = (id) => G.childrenOf(tree.value, id)
-  const siblingsOf = (id) => G.siblingsOf(tree.value, id)
-  const spouseFamilies = (id) => G.spouseFamilies(tree.value, id)
-  const relationToHome = (id) => G.relationship(tree.value, tree.value.homePersonId, id)
-
-  const places = computed(() => {
-    const s = new Set()
-    for (const p of persons.value) {
-      if (p.birth.place) s.add(p.birth.place)
-      if (p.death.place) s.add(p.death.place)
-      for (const f of p.facts) if (f.place) s.add(f.place)
+  // ---------------------------------------------------------------- открытие
+  let loadToken = 0
+  async function open(id) {
+    if (treeId.value === id && tree.value) return
+    await close()
+    const my = ++loadToken
+    treeId.value = id
+    status.value = 'loading'
+    error.value = null
+    try {
+      const res = await api.trees.get(id, auth.user?.id)
+      if (my !== loadToken) return
+      tree.value = freeze(res.tree, true)
+      role.value = res.role ?? 'owner'
+      version.value = res.version
+      past.value = []
+      future.value = []
+      restoreView()
+      status.value = 'ready'
+      saveState.value = 'saved'
+    } catch (e) {
+      if (my !== loadToken) return
+      error.value = e
+      status.value = 'error'
     }
-    for (const f of Object.values(tree.value.families)) if (f.marriage.place) s.add(f.marriage.place)
-    return [...s].sort((a, b) => a.localeCompare(b, 'ru'))
+  }
+
+  async function close() {
+    if (treeId.value) await flush()
+    loadToken++
+    tree.value = null
+    treeId.value = null
+    status.value = 'idle'
+    past.value = []
+    future.value = []
+    focusId.value = selectedId.value = null
+    recent.value = []
+    focusHistory.value = { back: [], forward: [] }
+  }
+
+  function restoreView() {
+    const t = tree.value
+    let v = {}
+    try {
+      v = JSON.parse(localStorage.getItem(VIEW_KEY(treeId.value)) ?? '{}')
+    } catch {
+      /* ignore */
+    }
+    const legacy = treesStore.legacyFocus
+    if (legacy?.treeId === treeId.value) {
+      v.focusId = legacy.focusId
+      treesStore.legacyFocus = null
+    }
+    const first = t.homePersonId ?? Object.keys(t.persons)[0] ?? null
+    focusId.value = v.focusId && t.persons[v.focusId] ? v.focusId : first
+    selectedId.value = v.selectedId && t.persons[v.selectedId] ? v.selectedId : focusId.value
+    recent.value = (v.recent ?? []).filter((x) => t.persons[x])
+  }
+  watch([focusId, selectedId, recent], () => {
+    if (!treeId.value) return
+    try {
+      localStorage.setItem(VIEW_KEY(treeId.value), JSON.stringify({ focusId: focusId.value, selectedId: selectedId.value, recent: recent.value }))
+    } catch {
+      /* ignore */
+    }
   })
 
-  /** Какие родственники могут быть добавлены */
-  function canAdd(id) {
-    const { father, mother, family } = parentsOf(id)
-    const full = (family?.partners.length ?? 0) >= 2
-    return {
-      father: !father && !full,
-      mother: !mother && !full,
-      brother: true,
-      sister: true,
-      partner: true,
-      son: true,
-      daughter: true,
+  // ---------------------------------------------------------------- сохранение
+  let outbox = emptyChanges()
+  let saveTimer = null
+  let retryTimer = null
+  let saving = null
+
+  function schedule() {
+    saveState.value = 'pending'
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => flush(), SAVE_DELAY)
+  }
+
+  async function flush() {
+    clearTimeout(saveTimer)
+    if (saving) await saving
+    if (!treeId.value || !tree.value || !hasChanges(outbox)) return
+    const acc = outbox
+    outbox = emptyChanges()
+    const id = treeId.value
+    const snapshot = tree.value
+    saveState.value = 'saving'
+    saving = (async () => {
+      try {
+        const input = api.mode === 'graphql' ? changesToInput(acc, snapshot, version.value) : null
+        const r = await api.trees.save(id, snapshot, input)
+        if (treeId.value !== id) return
+        version.value = r.version
+        lastSavedAt.value = Date.now()
+        saveError.value = ''
+        saveState.value = hasChanges(outbox) ? 'pending' : 'saved'
+        channel?.postMessage({ type: 'saved', treeId: id, version: r.version })
+        treesStore.patchSummary(id, { name: snapshot.name, persons: Object.keys(snapshot.persons).length, updatedAt: r.updatedAt })
+        if (hasChanges(outbox)) schedule()
+      } catch (e) {
+        // Вернуть несохранённое в очередь и повторить позже
+        mergeInto(outbox, acc)
+        saveError.value = errorMessage(e)
+        saveState.value = e.code === 'NETWORK' ? 'offline' : 'error'
+        clearTimeout(retryTimer)
+        retryTimer = setTimeout(() => flush(), e.code === 'NETWORK' ? 8000 : 20000)
+        if (e.code === 'CONFLICT') reloadFromServer()
+      } finally {
+        saving = null
+      }
+    })()
+    return saving
+  }
+
+  function mergeInto(target, src) {
+    if (src.full) target.full = true
+    for (const k of src.tree) target.tree.add(k)
+    for (const c of COLLECTIONS) {
+      for (const id of src.upsert[c]) if (!target.remove[c].has(id)) target.upsert[c].add(id)
+      for (const id of src.remove[c]) if (!target.upsert[c].has(id)) target.remove[c].add(id)
     }
   }
 
-  // ---------------------------------------------------------------- mutations
-  function touch(p) {
-    p.updatedAt = Date.now()
+  async function reloadFromServer() {
+    if (!treeId.value) return
+    const res = await api.trees.get(treeId.value, auth.user?.id)
+    tree.value = freeze(res.tree, true)
+    version.value = res.version
+    past.value = []
+    future.value = []
+    outbox = emptyChanges()
+    saveState.value = 'saved'
+    if (!tree.value.persons[focusId.value]) restoreView()
   }
 
+  // Другие вкладки с тем же древом
+  const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rodoslovnaya-trees') : null
+  const externalChange = ref(false)
+  channel?.addEventListener('message', (ev) => {
+    const m = ev.data
+    if (m?.type !== 'saved' || m.treeId !== treeId.value || m.version === version.value) return
+    if (!hasChanges(outbox) && saveState.value !== 'saving') reloadFromServer()
+    else externalChange.value = true
+  })
+  if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', (e) => {
+      if (hasChanges(outbox) || saving) {
+        flush()
+        e.preventDefault()
+      }
+    })
+    window.addEventListener('online', () => saveState.value === 'offline' && flush())
+  }
+
+  // ---------------------------------------------------------------- изменения и история
+  /**
+   * Изменить древо. recipe получает immer-черновик; результат recipe не возвращается —
+   * значения передавайте через замыкание.
+   * @param {string} label подпись для «Отменить: …»
+   * @param {(draft: import('@/domain/types').TreeData) => void} recipe
+   */
+  function commit(label, recipe) {
+    if (!tree.value) throw new ApiError('Древо не открыто', 'NOT_FOUND')
+    if (readonly.value) throw new ApiError('У вас доступ только для просмотра', 'FORBIDDEN')
+    const [next, patches] = produceWithPatches(tree.value, (d) => {
+      recipe(d)
+    })
+    if (!patches.length) return false
+    const stamped = { ...next, updatedAt: Date.now() }
+    past.value = [...past.value.slice(-(HISTORY_LIMIT - 1)), { tree: tree.value, label }]
+    future.value = []
+    tree.value = Object.freeze(stamped)
+    collectChanges(outbox, patches)
+    afterChange()
+    schedule()
+    return true
+  }
+
+  /** Отметить в очереди изменений разницу между двумя состояниями (для отмены/повтора). */
+  function diffInto(a, b) {
+    for (const c of COLLECTIONS) {
+      const A_ = a[c] ?? {}
+      const B_ = b[c] ?? {}
+      for (const id of Object.keys(B_)) if (A_[id] !== B_[id]) collectChanges(outbox, [{ op: 'replace', path: [c, id] }])
+      for (const id of Object.keys(A_)) if (!B_[id]) collectChanges(outbox, [{ op: 'remove', path: [c, id] }])
+    }
+    for (const k of ['name', 'description', 'homePersonId', 'customFields']) if (a[k] !== b[k]) outbox.tree.add(k)
+  }
+
+  function undo() {
+    const prev = past.value.at(-1)
+    if (!prev || readonly.value) return
+    past.value = past.value.slice(0, -1)
+    future.value = [...future.value, { tree: tree.value, label: prev.label }]
+    diffInto(tree.value, prev.tree)
+    tree.value = prev.tree
+    afterChange()
+    schedule()
+    return prev.label
+  }
+  function redo() {
+    const next = future.value.at(-1)
+    if (!next || readonly.value) return
+    future.value = future.value.slice(0, -1)
+    past.value = [...past.value, { tree: tree.value, label: next.label }]
+    diffInto(tree.value, next.tree)
+    tree.value = next.tree
+    afterChange()
+    schedule()
+    return next.label
+  }
+
+  function afterChange() {
+    const t = tree.value
+    if (focusId.value && !t.persons[focusId.value]) focusId.value = t.homePersonId ?? Object.keys(t.persons)[0] ?? null
+    if (selectedId.value && !t.persons[selectedId.value]) selectedId.value = focusId.value
+    if (recent.value.some((x) => !t.persons[x])) recent.value = recent.value.filter((x) => t.persons[x])
+  }
+
+  // ---------------------------------------------------------------- выбор
   function setFocus(id, select = true) {
-    if (!tree.value.persons[id]) return
+    if (!person(id)) return
+    if (focusId.value && focusId.value !== id) {
+      focusHistory.value = { back: [...focusHistory.value.back, focusId.value].slice(-50), forward: [] }
+    }
     focusId.value = id
-    if (select) selectedId.value = id
+    if (select) selectPerson(id)
   }
-  /** Построить дерево от человека: он становится центром, и открывается вид «Семейное древо». */
-  function buildFrom(id) {
-    if (!tree.value.persons[id]) return
-    ui.value.view = 'family'
-    setFocus(id)
+  const alive = (ids) => ids.filter((x) => person(x) && x !== focusId.value)
+  const canFocusBack = computed(() => alive(focusHistory.value.back).length > 0)
+  const canFocusForward = computed(() => alive(focusHistory.value.forward).length > 0)
+  /** Вернуться к предыдущему центру древа. */
+  function focusBack() {
+    const back = alive(focusHistory.value.back)
+    const id = back.pop()
+    if (!id) return
+    focusHistory.value = { back, forward: [...focusHistory.value.forward, focusId.value].filter(Boolean) }
+    focusId.value = id
+    selectPerson(id)
   }
-  function select(id) {
+  function focusForward() {
+    const forward = alive(focusHistory.value.forward)
+    const id = forward.pop()
+    if (!id) return
+    focusHistory.value = { back: [...focusHistory.value.back, focusId.value].filter(Boolean), forward }
+    focusId.value = id
+    selectPerson(id)
+  }
+  function selectPerson(id) {
+    if (id && !person(id)) return
     selectedId.value = id
+    if (id) recent.value = [id, ...recent.value.filter((x) => x !== id)].slice(0, 12)
   }
 
-  function setHome(id) {
-    snapshot()
-    tree.value.homePersonId = id
+  // ---------------------------------------------------------------- действия
+  let result
+  const run = (label, fn) => {
+    result = undefined
+    commit(label, (d) => {
+      result = fn(d)
+    })
+    return result
   }
 
-  function renameTree(name) {
-    snapshot()
-    tree.value.name = name
+  const actions = {
+    setHome: (id) => run('«Это Вы»', (d) => void (d.homePersonId = id)),
+    updateInfo: (patch) =>
+      run('Сведения о древе', (d) => {
+        if (patch.name !== undefined) d.name = patch.name
+        if (patch.description !== undefined) d.description = patch.description
+      }),
+    addPerson: (data) => run('Новая персона', (d) => A.addPerson(d, data)),
+    updatePerson: (id, patch, label = 'Изменение персоны') => run(label, (d) => A.updatePerson(d, id, patch)),
+    toggleFavorite: (id) => run('Избранное', (d) => void (d.persons[id] && (d.persons[id].favorite = !d.persons[id].favorite))),
+    deletePerson: (id) => run('Удаление персоны', (d) => A.deletePerson(d, id)),
+    addRelative: (targetId, kind, data, opts) => run('Добавление родственника', (d) => A.addRelative(d, targetId, kind, data, opts)),
+    addParentFamily: (childId, link) => run('Новые родители', (d) => A.addParentFamily(d, childId, link)),
+    updateFamily: (id, patch) => run('Изменение отношений', (d) => A.updateFamily(d, id, patch)),
+    removePartnership: (familyId, keepId) => run('Удаление связи', (d) => A.removePartnership(d, familyId, keepId)),
+    detachChild: (childId, familyId) => run('Отвязка от родителей', (d) => A.detachChild(d, childId, familyId)),
+    setChildLink: (familyId, childId, link) => run('Тип родства', (d) => A.setChildLink(d, familyId, childId, link)),
+    moveChild: (childId, from, to) => run('Смена родителей', (d) => A.moveChild(d, childId, from, to)),
+    saveEvent: (pid, ev) => run('Событие', (d) => A.saveEvent(d, pid, ev)),
+    removeEvent: (pid, eventId) => run('Удаление события', (d) => A.removeEvent(d, pid, eventId)),
+    /** Найти или создать место по тексту. */
+    ensurePlace: (text) => {
+      const s = text?.trim()
+      if (!s) return null
+      const found = findPlaceByName(tree.value, s)
+      return found ? found.id : run('Новое место', (d) => ensurePlace(d, s))
+    },
+    savePlace: (place) => run('Место', (d) => A.savePlace(d, place)),
+    removePlace: (id, replaceWith) => run('Удаление места', (d) => A.removePlace(d, id, replaceWith)),
+    mergePlaces: (keepId, dropId) => run('Объединение мест', (d) => A.mergePlaces(d, keepId, dropId)),
+    addMedia: (items) => run(items.length > 1 ? 'Добавление файлов' : 'Добавление файла', (d) => A.addMedia(d, items)),
+    updateMedia: (id, patch) => run('Изменение файла', (d) => A.updateMedia(d, id, patch)),
+    removeMedia: (id) => {
+      const m = tree.value?.media[id]
+      const ok = run('Удаление файла', (d) => A.removeMedia(d, id))
+      if (m?.fileKey) setTimeout(() => api.media.remove(m.fileKey).catch(() => {}), 60000)
+      return ok
+    },
+    setAvatar: (pid, mediaId) => run('Главное фото', (d) => A.setAvatar(d, pid, mediaId)),
+    linkMedia: (mediaId, pid, on) => run(on ? 'Отметка на фото' : 'Снятие отметки', (d) => A.linkMedia(d, mediaId, pid, on)),
+    saveSource: (s) => run('Источник', (d) => A.saveSource(d, s)),
+    removeSource: (id) => run('Удаление источника', (d) => A.removeSource(d, id)),
+    saveClan: (c) => run('Род', (d) => A.saveClan(d, c)),
+    removeClan: (id) => run('Удаление рода', (d) => A.removeClan(d, id)),
+    assignClan: (ids, clanId) => run('Род', (d) => A.assignClan(d, ids, clanId)),
+    saveCustomField: (def) => run('Дополнительное поле', (d) => A.saveCustomField(d, def)),
+    removeCustomField: (id) => run('Удаление поля', (d) => A.removeCustomField(d, id)),
+    mergePersons: (keepId, dropId) => run('Объединение персон', (d) => A.mergePersons(d, keepId, dropId)),
+    /** Заменить содержимое древа (импорт в открытое древо). */
+    replaceData: (data) =>
+      run('Импорт', (d) => {
+        for (const k of ['persons', 'families', 'places', 'media', 'sources', 'clans', 'customFields', 'homePersonId']) d[k] = data[k]
+      }),
   }
-
-  function updatePerson(id, patch) {
-    const p = tree.value.persons[id]
-    if (!p) return
-    snapshot()
-    Object.assign(p, JSON.parse(JSON.stringify(patch)))
-    touch(p)
-  }
-
-  function addRelative(targetId, kind, data, opts = {}) {
-    const t = tree.value
-    if (!t.persons[targetId]) throw new Error('Персона не найдена')
-    const before = JSON.stringify(t)
-    snapshot()
-    try {
-      return addRelativeUnsafe(targetId, kind, data, opts)
-    } catch (e) {
-      past.value.pop()
-      tree.value = JSON.parse(before)
-      throw e
-    }
-  }
-
-  function addRelativeUnsafe(targetId, kind, data, opts) {
-    const t = tree.value
-    let pid
-    if (opts.existingId) {
-      if (!t.persons[opts.existingId]) throw new Error('Персона не найдена')
-      if (opts.existingId === targetId) throw new Error('Нельзя связать персону саму с собой')
-      pid = opts.existingId
-    } else {
-      const gender =
-        kind === 'father' || kind === 'brother' || kind === 'son'
-          ? 'M'
-          : kind === 'mother' || kind === 'sister' || kind === 'daughter'
-            ? 'F'
-            : (data.gender ?? 'U')
-      const p = newPerson({ ...JSON.parse(JSON.stringify(data)), gender: data.gender ?? gender })
-      t.persons[p.id] = p
-      pid = p.id
-    }
-
-    const addFamily = (f) => {
-      t.families[f.id] = f
-      return f
-    }
-
-    switch (kind) {
-      case 'father':
-      case 'mother': {
-        let pf = G.parentFamily(t, targetId)
-        if (!pf) pf = addFamily(newFamily({ partners: [], children: [targetId] }))
-        if (pf.partners.length >= 2) throw new Error('У персоны уже есть оба родителя')
-        if (pf.partners.includes(pid)) break
-        // Если новый родитель уже в паре с существующим родителем — переносим ребёнка в ту семью
-        const existingPartner = pf.partners[0]
-        if (existingPartner && opts.existingId) {
-          const both = Object.values(t.families).find(
-            (f) => f.id !== pf.id && f.partners.includes(existingPartner) && f.partners.includes(pid),
-          )
-          if (both) {
-            pf.children = pf.children.filter((c) => c !== targetId)
-            both.children.push(targetId)
-            cleanupFamilies()
-            break
-          }
-        }
-        pf.partners.push(pid)
-        break
-      }
-      case 'son':
-      case 'daughter': {
-        if (opts.existingId && G.parentFamily(t, pid)) {
-          const pf = G.parentFamily(t, pid)
-          if (pf.partners.length >= 2) throw new Error('У выбранной персоны уже есть оба родителя')
-          if (!pf.partners.includes(targetId)) pf.partners.push(targetId)
-          break
-        }
-        let fam
-        if (opts.familyId && t.families[opts.familyId]) fam = t.families[opts.familyId]
-        else {
-          // семья с одним родителем
-          fam = Object.values(t.families).find((f) => f.partners.length === 1 && f.partners[0] === targetId)
-          if (!fam) fam = addFamily(newFamily({ partners: [targetId], status: 'unknown' }))
-        }
-        if (!fam.children.includes(pid)) fam.children.push(pid)
-        break
-      }
-      case 'brother':
-      case 'sister': {
-        if (opts.existingId && G.parentFamily(t, pid)) throw new Error('У выбранной персоны уже есть родители')
-        let fam
-        if (opts.familyId && t.families[opts.familyId]) fam = t.families[opts.familyId]
-        else fam = G.parentFamily(t, targetId)
-        if (!fam) fam = addFamily(newFamily({ partners: [], children: [targetId], status: 'unknown' }))
-        if (!fam.children.includes(pid)) fam.children.push(pid)
-        break
-      }
-      case 'partner': {
-        const exists = Object.values(t.families).find((f) => f.partners.includes(targetId) && f.partners.includes(pid))
-        if (exists) throw new Error('Эти персоны уже связаны как партнёры')
-        // Если у персоны есть «семья с одним родителем» с детьми — предложено объединить (familyId)
-        if (opts.familyId && t.families[opts.familyId] && t.families[opts.familyId].partners.length === 1) {
-          t.families[opts.familyId].partners.push(pid)
-          t.families[opts.familyId].status = opts.status ?? 'married'
-        } else addFamily(newFamily({ partners: [targetId, pid], status: opts.status ?? 'married' }))
-        break
-      }
-    }
-    return pid
-  }
-
-  function cleanupFamilies() {
-    const t = tree.value
-    for (const f of Object.values(t.families)) {
-      f.partners = f.partners.filter((p) => t.persons[p])
-      f.children = f.children.filter((c) => t.persons[c])
-      const n = f.partners.length
-      const c = f.children.length
-      if ((n === 0 && c <= 1) || (n === 1 && c === 0)) delete t.families[f.id]
-    }
-  }
-
-  function deletePerson(id) {
-    const t = tree.value
-    if (!t.persons[id]) return
-    snapshot()
-    // кого показать после удаления
-    const neighbours = [
-      ...G.childrenOf(t, id),
-      ...G.partnersOf(t, id).map((x) => x.id),
-      ...Object.values(G.parentsOf(t, id)).filter((x) => typeof x === 'string'),
-      ...G.siblingsOf(t, id).full,
-    ]
-    delete t.persons[id]
-    for (const f of Object.values(t.families)) {
-      f.partners = f.partners.filter((p) => p !== id)
-      f.children = f.children.filter((c) => c !== id)
-    }
-    cleanupFamilies()
-    const fallback = neighbours.find((n) => t.persons[n]) ?? firstId()
-    if (t.homePersonId === id) t.homePersonId = fallback
-    if (focusId.value === id) focusId.value = fallback
-    if (selectedId.value === id) selectedId.value = fallback
-  }
-
-  function updateFamily(id, patch) {
-    const f = tree.value.families[id]
-    if (!f) return
-    snapshot()
-    Object.assign(f, JSON.parse(JSON.stringify(patch)))
-  }
-
-  /** Разорвать связь «партнёры» (дети остаются с первым партнёром) */
-  function removePartnership(familyId, keepId) {
-    const f = tree.value.families[familyId]
-    if (!f) return
-    snapshot()
-    if (!f.children.length) delete tree.value.families[familyId]
-    else f.partners = f.partners.filter((p) => p === keepId)
-    cleanupFamilies()
-  }
-
-  /** Отвязать ребёнка от родителей */
-  function detachChild(childId) {
-    const f = G.parentFamily(tree.value, childId)
-    if (!f) return
-    snapshot()
-    f.children = f.children.filter((c) => c !== childId)
-    cleanupFamilies()
-  }
-
-  // Фото
-  function addPhoto(pid, src, caption = '', asAvatar = false) {
-    const p = tree.value.persons[pid]
-    if (!p) return
-    snapshot()
-    const photo = { id: uid('ph'), src, caption, addedAt: Date.now() }
-    p.photos.push(photo)
-    if (asAvatar || !p.avatarId) p.avatarId = photo.id
-    touch(p)
-    return photo.id
-  }
-  function removePhoto(pid, photoId) {
-    const p = tree.value.persons[pid]
-    if (!p) return
-    snapshot()
-    p.photos = p.photos.filter((x) => x.id !== photoId)
-    if (p.avatarId === photoId) p.avatarId = p.photos[0]?.id ?? null
-    touch(p)
-  }
-  function setAvatar(pid, photoId) {
-    const p = tree.value.persons[pid]
-    if (!p) return
-    snapshot()
-    p.avatarId = photoId
-    touch(p)
-  }
-  function updatePhoto(pid, photoId, caption) {
-    const p = tree.value.persons[pid]
-    const ph = p?.photos.find((x) => x.id === photoId)
-    if (!ph) return
-    snapshot()
-    ph.caption = caption
-  }
-  const avatarOf = (p) => (p?.avatarId ? p.photos.find((x) => x.id === p.avatarId)?.src : undefined)
-
-  // Факты
-  function saveFact(pid, fact) {
-    const p = tree.value.persons[pid]
-    if (!p) return
-    snapshot()
-    const i = p.facts.findIndex((f) => f.id === fact.id)
-    const copy = JSON.parse(JSON.stringify(fact))
-    if (i >= 0) p.facts[i] = copy
-    else p.facts.push(copy)
-    touch(p)
-  }
-  function removeFact(pid, factId) {
-    const p = tree.value.persons[pid]
-    if (!p) return
-    snapshot()
-    p.facts = p.facts.filter((f) => f.id !== factId)
-    touch(p)
-  }
-
-  // Целое древо
-  function replaceTree(data) {
-    snapshot()
-    tree.value = data
-    focusId.value = data.homePersonId ?? Object.keys(data.persons)[0] ?? null
-    selectedId.value = focusId.value
-  }
-  const loadDemo = () => replaceTree(demoTree())
-  const loadOriginal = () => replaceTree(shevtsovTree())
-  const loadRomanovs = () => replaceTree(romanovTree())
-  const newTree = () => replaceTree(emptyTree())
 
   return {
+    // состояние
+    treeId,
     tree,
-    ui,
+    role,
+    status,
+    error,
+    saveState,
+    saveError,
+    lastSavedAt,
+    externalChange,
+    graph,
+    readonly,
     focusId,
     selectedId,
-    lastSaved,
-    saveError,
-    // history
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    // getters
+    recent,
+    focusHistory,
+    canFocusBack,
+    canFocusForward,
+    // производные
     persons,
     count,
+    homeId,
     focus,
     selected,
-    homeId,
-    places,
     person,
-    parentsOf,
-    partnersOf,
-    childrenOf,
-    siblingsOf,
-    spouseFamilies,
+    family,
     relationToHome,
-    canAdd,
-    avatarOf,
-    // actions
+    // история
+    canUndo,
+    canRedo,
+    undoLabel,
+    redoLabel,
+    undo,
+    redo,
+    // жизненный цикл
+    open,
+    close,
+    flush,
+    reloadFromServer,
+    commit,
     setFocus,
-    buildFrom,
-    select,
-    setHome,
-    renameTree,
-    updatePerson,
-    addRelative,
-    deletePerson,
-    updateFamily,
-    removePartnership,
-    detachChild,
-    addPhoto,
-    removePhoto,
-    setAvatar,
-    updatePhoto,
-    saveFact,
-    removeFact,
-    replaceTree,
-    loadDemo,
-    loadOriginal,
-    loadRomanovs,
-    newTree,
+    focusBack,
+    focusForward,
+    selectPerson,
+    ...actions,
   }
 })
