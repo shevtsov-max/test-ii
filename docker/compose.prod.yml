@@ -1,0 +1,131 @@
+# Продакшн: Caddy (HTTPS + фронтенд) → бэкенд (Octane + FrankenPHP) → MySQL.
+# Все данные — в каталоге ${DATA_DIR} на диске сервера: переживают перезапуск и пересоздание контейнеров.
+# Запуск из корня проекта: docker compose -f docker-compose.prod.yml up -d --build   (см. docs/deploy.md)
+name: rodoslovnaya
+
+x-backend: &backend
+  build:
+    context: ../backend
+    target: prod
+  image: rodoslovnaya-backend:latest
+  env_file: ../.env
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+    DB_HOST: mysql
+    DB_PORT: 3306
+    LOG_CHANNEL: stderr
+  volumes:
+    - ${DATA_DIR:-/srv/rodoslovnaya}/storage:/app/storage/app
+  depends_on:
+    mysql:
+      condition: service_healthy
+  restart: unless-stopped
+  logging: &logging
+    driver: json-file
+    options:
+      max-size: 20m
+      max-file: "5"
+
+services:
+  # Один раз при запуске: каталог файлов на хосте должен принадлежать www-data (uid 33), от имени которого работает бэкенд
+  init:
+    image: busybox:1.37
+    command: ["sh", "-c", "mkdir -p /data/storage && [ \"$$(stat -c %u /data/storage)\" = 33 ] || chown -R 33:33 /data/storage"]
+    volumes:
+      - ${DATA_DIR:-/srv/rodoslovnaya}:/data
+    restart: "no"
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      # Каталог на хосте, а не именованный том: его не удалит `docker compose down -v`
+      - ${DATA_DIR:-/srv/rodoslovnaya}/mysql:/var/lib/mysql
+      - ../db/mysql/conf.d:/etc/mysql/conf.d:ro
+    # Наружу порт не открыт: база доступна только контейнерам проекта
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    stop_grace_period: 60s
+    restart: unless-stopped
+    logging: *logging
+
+  backend:
+    <<: *backend
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      LOG_CHANNEL: stderr
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  worker:
+    <<: *backend
+    depends_on:
+      backend:
+        condition: service_healthy
+    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600"]
+    healthcheck:
+      disable: true
+
+  scheduler:
+    <<: *backend
+    depends_on:
+      backend:
+        condition: service_healthy
+    command: ["php", "artisan", "schedule:work"]
+    healthcheck:
+      disable: true
+
+  web:
+    build:
+      context: ../frontend
+      target: web
+      args:
+        VITE_API_MODE: graphql
+        VITE_GRAPHQL_URL: /graphql
+        VITE_SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+        VITE_OPERATOR_NAME: ${OPERATOR_NAME:-}
+        VITE_OPERATOR_INN: ${OPERATOR_INN:-}
+        VITE_OPERATOR_OGRN: ${OPERATOR_OGRN:-}
+        VITE_OPERATOR_ADDRESS: ${OPERATOR_ADDRESS:-}
+        VITE_SITE_URL: ${APP_URL:-}
+        VITE_OAUTH_PROVIDERS: ${OAUTH_PROVIDERS:-}
+    image: rodoslovnaya-web:latest
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Укажите SITE_ADDRESS в .env — домен сайта}
+      ACME_EMAIL: ${ACME_EMAIL:?Укажите ACME_EMAIL в .env — почта для уведомлений Let's Encrypt}
+    ports:
+      - ${HTTP_PORT:-80}:80
+      - ${HTTPS_PORT:-443}:443
+      - ${HTTPS_PORT:-443}:443/udp
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Сертификаты HTTPS — тоже на диске: при пересоздании контейнера не выпускаются заново
+      - ${DATA_DIR:-/srv/rodoslovnaya}/caddy/data:/data
+      - ${DATA_DIR:-/srv/rodoslovnaya}/caddy/config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging

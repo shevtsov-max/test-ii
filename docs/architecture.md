@@ -1,6 +1,29 @@
 # Архитектура
 
-Приложение разделено на слои; зависимости идут только сверху вниз:
+## Сервисы
+
+```
+браузер ──HTTPS──▶ Caddy (web) ──┬── статика фронтенда (frontend/, Vue 3 + Quasar, PWA)
+                                  └── /graphql /api /files /telegram ──▶ backend (Laravel Octane + FrankenPHP)
+                                                                          ├── worker     очередь: письма
+                                                                          ├── scheduler  напоминания, уборка
+                                                                          └── MySQL 8.4 (db/)
+```
+
+| Папка | Что внутри |
+|---|---|
+| `frontend/` | Веб-приложение. Работает и без сервера (режим `local`, IndexedDB — так опубликована демо-версия на GitHub Pages), и с сервером (режим `graphql`) |
+| `backend/` | GraphQL API на Laravel: учётные записи, древа, файлы, совместный доступ, передача веток, Telegram-бот. Подробно — [`backend/README.md`](../backend/README.md) |
+| `db/` | Настройки MySQL и скрипт инициализации для разработки |
+| `docker/` | Compose-файлы dev и prod, конфигурация Caddy — [`docker/README.md`](../docker/README.md) |
+| `docs/` | Архитектура, контракт API, развёртывание, юридическая памятка, монетизация |
+
+Контракт между фронтендом и бэкендом — [`docs/api/schema.graphql`](api/schema.graphql) (генерируется из кода бэкенда)
+и [`docs/api/README.md`](api/README.md).
+
+## Фронтенд
+
+Пути ниже — относительно `frontend/`. Приложение разделено на слои; зависимости идут только сверху вниз:
 
 ```
 pages / layouts / components      интерфейс (Vue, Quasar)
@@ -74,12 +97,15 @@ localStorage (`ft:tree:v1`) при первом запуске автомати�
 
 ```
 api.mode           'local' | 'graphql'
-api.capabilities   { guest, sharing, sync, emailFlows, oauth } — интерфейс показывает только доступное
+api.capabilities   { guest, sharing, sync, emailFlows, oauth, delegation, telegram } — интерфейс показывает только доступное
 api.auth           me, login, register, continueAsGuest, logout, requestPasswordReset, resetPassword,
-                   verifyEmail, resendVerification, updateProfile, changePassword, deleteAccount, oauthUrl
+                   verifyEmail, resendVerification, updateProfile, acceptDocuments, changePassword, deleteAccount, oauthUrl
 api.trees          list, get, create, save, rename, remove, version
 api.media          upload, url, remove, exportData, importData
-api.sharing        members, invite, updateRole, remove, publicLink
+api.sharing        members, invite, updateRole, remove
+api.delegations    list, branches, create, revoke, clone          передача веток родственникам
+api.invitations    get, accept, decline                           приглашения по ссылке /invite/<token>
+api.notifications  settings, update, telegramLink, disconnect, test, upcoming
 ```
 
 - **local** — IndexedDB (`idb`), учётные записи с PBKDF2, гостевой режим, файлы как Blob с уменьшенной копией.
@@ -90,24 +116,49 @@ api.sharing        members, invite, updateRole, remove, publicLink
 
 Ошибки приводятся к `ApiError { code, message, fields }` — формы показывают `fields` под полями.
 
-### Как подключить сервер
+### Режим с сервером
 
-1. Реализовать схему `docs/api/schema.graphql` (идентификаторы сущностей древа создаёт клиент; `applyTreeChanges`
-   принимает только изменённые сущности и проверяет `baseVersion`).
-2. Собрать фронтенд с `VITE_API_MODE=graphql` и `VITE_GRAPHQL_URL`. При необходимости — `VITE_OAUTH_PROVIDERS` и
-   `VITE_ROUTER_MODE=history` (тогда сервер должен отдавать `index.html` на любой путь).
-3. Перенос локальных данных пользователя — через резервную копию (Настройки древа → Экспорт → Импорт).
+Сервер — `backend/`. В разработке `docker compose up -d` запускает фронтенд уже в режиме `graphql` (Vite проксирует
+`/graphql`, `/api`, `/files` в бэкенд); в продакшне фронтенд собирается с `VITE_API_MODE=graphql` в образе `web`.
+Файлы загружаются в два шага: `createUpload` выдаёт подписанную ссылку, файл отправляется `PUT`-запросом. Перенос
+локальных данных пользователя — через резервную копию (Настройки древа → Экспорт → Импорт).
 
 ## Маршруты (`src/app/router.js`)
 
 Режим адресов по умолчанию — hash (`/#/app`): работает на любом статическом хостинге, включая GitHub Pages.
 
-- публичные: `/`, `/help`, `/privacy`, `/terms`;
+- публичные: `/`, `/help`, `/privacy`, `/terms`, `/consent`, `/marketing-consent`, `/invite/:token`;
 - вход: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`;
 - приложение (нужна сессия, в том числе гостевая): `/app`, `/app/new`, `/app/account`;
 - древо: `/app/tree/:treeId/{overview,chart,people,people/:personId,events,places,media,sources,clans,reports,stats,check,settings}`.
 
 Страницы загружаются лениво; если после обновления приложения старый фрагмент не найден, страница перезагружается.
+
+## Передача ветки родственнику
+
+Ветка — персона, все её потомки и их супруги (`frontend/src/domain/branches.js`, на сервере — `backend/app/Domain/Branch.php`).
+
+1. Владелец древа выбирает персону → «Передать ветку родственнику…» (`DelegateDialog`). Сервер создаёт приглашение
+   (письмо и/или ссылка `/#/invite/<token>`, 30 дней).
+2. Родственник открывает ссылку, входит или регистрируется и принимает приглашение: у него появляется **своё древо**
+   с копией ветки и родителями корня для контекста; фото копируются.
+3. В древе владельца ветка закрыта для правки: сервер отклоняет изменения её персон и семей, а фронтенд накладывает
+   поверх данных древа живую ветку из древа родственника (`delegatedBranches` → `applyBranches`) и прячет кнопки
+   правки (`tree.canEdit(id)`, замок на карточках, плашка `BranchNotice`).
+4. «Склонировать себе» (`cloneDelegation`) копирует текущую ветку в древо владельца — дальше это обычные данные,
+   древо родственника не меняется. Если родственник удалит своё древо, ветка вернётся владельцу автоматически.
+
+## Юридические документы и согласия
+
+Тексты — `frontend/src/app/legal.js`, версии — там же и в `backend/config/rodoslovnaya.php` (должны совпадать).
+Сервер хранит журнал согласий; если версия обязательного документа изменилась, `me.pendingConsents` не пуст и
+приложение показывает `LegalConsentDialog`. Памятка владельцу — [`docs/legal.md`](legal.md).
+
+## Напоминания о памятных датах
+
+`upcomingEvents` (сервер) / `api.notifications.upcoming` (локально) — дни рождения, годовщины свадеб и дни памяти
+по всем древам пользователя; блок `UpcomingDates` на странице «Мои древа». Telegram-бот (`backend/app/Services/Notifications`)
+присылает сводку в выбранное время; привязка — через ссылку `t.me/<бот>?start=<одноразовый код>`.
 
 ## PWA и обновления (`src/stores/pwa.js`)
 

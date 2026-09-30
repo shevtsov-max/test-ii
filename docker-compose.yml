@@ -1,0 +1,7 @@
+name: rodoslovnaya-dev
+
+# Среда разработки. Запуск: cp .env.example .env && docker compose up -d
+# Описание сервисов — docker/compose.dev.yml, инструкция — docker/README.md.
+include:
+  - path: docker/compose.dev.yml
+    env_file: .env

@@ -1,31 +1,42 @@
 # Родословная (family-tree)
 
-Vue 3 + JavaScript (без TypeScript) + Quasar + Pinia + vue-router + Vite, PWA (vite-plugin-pwa), immer, IndexedDB (idb).
-Возможности и структура — в `README.md`, устройство слоёв — в `docs/architecture.md`, контракт сервера — `docs/api/schema.graphql`.
+Сервисы: `frontend/` (Vue 3 + JavaScript без TypeScript + Quasar + Pinia + vue-router + Vite, PWA, immer, IndexedDB),
+`backend/` (Laravel 13 + Octane/FrankenPHP + rebing/graphql-laravel + Sanctum, PHP 8.4 — правила в `backend/CLAUDE.md`),
+`db/` (MySQL 8.4), `docker/` (Compose dev/prod, Caddy).
+Возможности и структура — в `README.md`, устройство — в `docs/architecture.md`, контракт API — `docs/api/` (схема генерируется
+из бэкенда), сервер — `docs/deploy.md`, законы о ПДн — `docs/legal.md`.
 
 ## Команды
 
-- `npm ci` — установка зависимостей
-- `npm run dev` — dev-сервер (http://localhost:5173)
-- `npm test` — модульные тесты (vitest, `tests/**/*.test.js`)
-- `npm run build` — иконки + сборка в `dist/`
+Фронтенд (из `frontend/`):
+- `npm ci`, `npm run dev` (http://localhost:5173, режим `local` без сервера), `npm test` (vitest), `npm run build`
 
-Перед коммитом всегда запускать `npm test` и `npm run build`.
+Бэкенд (из `backend/`): `php artisan test`, `vendor/bin/pint`,
+`php artisan graphql:print-schema --output=../docs/api/schema.graphql` (после изменения схемы).
+
+Всё вместе: `cp .env.example .env && docker compose up -d` из корня (см. `docker/README.md`).
+
+Перед коммитом всегда запускать `npm test` и `npm run build` во `frontend/`, а при изменениях бэкенда — `php artisan test`
+и `vendor/bin/pint --test` в `backend/`.
 
 ## Процесс работы
 
 Проект в разработке, прод-среды нет, поэтому изменения коммитятся и пушатся
 **сразу в ветку `main`** (без PR и отдельных веток), если пользователь не попросил иначе.
 
-После пуша в `main` GitHub Actions (`.github/workflows/deploy.yml`) прогоняет тесты, собирает сайт
+После пуша в `main` GitHub Actions (`.github/workflows/deploy.yml`) прогоняет тесты фронтенда, собирает демо-версию (режим `local`)
 и публикует его на GitHub Pages: https://shevtsov-max.github.io/test-ii/
 Пользователь открывает этот адрес в браузере и присылает правки.
 
 ## Соглашения
 
+- Пути ниже — внутри `frontend/`.
 - Слои: `domain` (чистая логика, без Vue) → `api` (local | graphql) → `stores` → `pages/components`. Страницы и компоненты
-  не обращаются к IndexedDB или fetch напрямую — только через `api` из `src/api/index.js`.
+  не обращаются к IndexedDB или fetch напрямую — только через `api` из `src/api/index.js`. Новая серверная функция —
+  операция в `src/api/graphql/operations.js` + метод адаптера + заглушка в `src/api/local` + флаг в `api.capabilities`.
 - Все изменения древа идут через действия стора `src/stores/tree.js` (они вызывают рецепты `src/domain/actions.js` внутри immer).
+  Ветки, переданные родственникам, закрыты для правки: проверяйте `tree.canEdit(personId)` вместо `tree.readonly` в местах,
+  где правится конкретная персона.
   Так работают отмена/повтор и отправка на сервер только изменённых сущностей. Новое действие — рецепт в `actions.js` +
   обёртка в сторе.
 - Данные хранятся в IndexedDB (режим `local`); настройки интерфейса — в localStorage (`rd:prefs`, `rd:view:<id>`).
@@ -35,12 +46,14 @@ Vue 3 + JavaScript (без TypeScript) + Quasar + Pinia + vue-router + Vite, PWA
 - `vite.config.js` использует `base: './'` — не менять, иначе сломается деплой на Pages. Адреса — hash (`/#/app`).
 - Цвета — только токены `--ft-*` из `src/styles/tokens.scss` (светлая и тёмная темы). Для тёмной темы в scoped-стилях
   писать `.класс:is(.body--dark *)`, а не `:global(.body--dark) .класс` (Vue превращает его в правило для всего `body`).
-- При выпуске новой версии: повысить `version` в `package.json` и добавить запись в `src/app/changelog.js`
+- При выпуске новой версии: повысить `version` в `frontend/package.json` и добавить запись в `src/app/changelog.js`
   (её покажет окно «Что нового» после обновления PWA).
+- Юридические тексты — `src/app/legal.js`. Изменили текст — повысьте версию документа в `LEGAL_VERSIONS` **и** в
+  `backend/config/rodoslovnaya.php` (`legal`): пользователи примут новую редакцию при входе.
 
 ## Тестовые данные
 
-- `src/data/romanovs.js` — пример «Романовы» (Николай II и европейские династии, 72 человека): несколько браков,
+- Пути — внутри `frontend/`. `src/data/romanovs.js` — пример «Романовы» (Николай II и европейские династии, 72 человека): несколько браков,
   сводные братья/сёстры, помолвка, «схлопывание» предков.
 - `src/data/seed.js` — пример «Семья Орловых» (`demoTree`), древо «Шевцовы», заготовка нового древа (`starterTree`).
 - Портреты — собственные SVG-иллюстрации в `public/photos/`, генерируются `node scripts/gen-portraits.mjs`

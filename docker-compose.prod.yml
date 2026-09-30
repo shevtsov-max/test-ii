@@ -1,0 +1,7 @@
+name: rodoslovnaya
+
+# Продакшн. Запуск: docker compose -f docker-compose.prod.yml up -d --build
+# Описание сервисов — docker/compose.prod.yml, инструкция — docs/deploy.md.
+include:
+  - path: docker/compose.prod.yml
+    env_file: .env

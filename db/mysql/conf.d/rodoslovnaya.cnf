@@ -1,0 +1,20 @@
+# Настройки MySQL для «Родословной» (подключаются и в dev, и в prod: docker/compose.*.yml)
+[mysqld]
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+default-time-zone = '+00:00'
+# Большие древа сохраняются пачками — пакет побольше
+max_allowed_packet = 64M
+# Небольшой сервер (2 ГБ ОЗУ): кеш InnoDB не раздуваем
+innodb_buffer_pool_size = 256M
+innodb_log_file_size = 64M
+# Надёжность при сбоях питания: журнал сбрасывается на диск при каждой транзакции
+innodb_flush_log_at_trx_commit = 1
+sync_binlog = 1
+# Двоичный журнал нужен для восстановления на момент времени (бэкапы) — хранить 7 дней
+binlog_expire_logs_seconds = 604800
+skip-name-resolve
+performance_schema = OFF
+
+[client]
+default-character-set = utf8mb4

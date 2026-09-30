@@ -1,8 +1,12 @@
 name: Build & deploy to GitHub Pages
 
+# Демо-версия фронтенда в режиме без сервера (данные в браузере): https://shevtsov-max.github.io/test-ii/
+# Полная версия с сервером разворачивается через docker/ (см. docs/deploy.md).
+
 on:
   push:
     branches: [main]
+    paths-ignore: ['backend/**', 'db/**', 'docker/**', 'docs/**']
   pull_request:
   workflow_dispatch:
 
@@ -24,12 +28,16 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm test
       - run: npm run build
@@ -46,15 +54,18 @@ jobs:
               echo "::warning::ветка $branch не найдена — эксперимент $path пропущен"
               continue
             fi
-            git worktree add "../exp-$path" FETCH_HEAD
-            (cd "../exp-$path" && npm ci && npm run build)
+            git worktree add "../../exp-$path" FETCH_HEAD
+            # Старые ветки — фронтенд в корне, новые — в frontend/
+            dir="../../exp-$path"
+            if [ -d "$dir/frontend" ]; then dir="$dir/frontend"; fi
+            (cd "$dir" && npm ci && npm run build)
             mkdir -p "dist/$path"
-            cp -r "../exp-$path/dist/." "dist/$path/"
+            cp -r "$dir/dist/." "dist/$path/"
           done
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: frontend/dist
 
   deploy:
     if: github.event_name != 'pull_request'
