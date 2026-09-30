@@ -26,7 +26,7 @@ const relation = computed(() => (store.ui.showRelation && !props.home ? store.re
     class="pc"
     :class="[
       `gender-${person.gender}`,
-      { 'pc--selected': selected, 'pc--focus': focus, 'pc--dead': !person.living, 'pc--dup': dup },
+      { 'pc--selected': selected, 'pc--focus': focus, 'pc--dead': !person.living, 'pc--dup': dup, 'pc--home': home },
     ]"
     role="button"
     tabindex="0"
@@ -42,11 +42,12 @@ const relation = computed(() => (store.ui.showRelation && !props.home ? store.re
     <PersonAvatar :person="person" :size="44" camera :photos="store.ui.showPhotos" @camera="emit('camera')" />
 
     <div class="pc__body">
-      <div v-if="relation" class="pc__rel" :title="relation">{{ relation }}</div>
+      <div v-if="home" class="pc__rel pc__rel--me">
+        <q-icon name="sym_r_home" size="14px" />
+        Это Вы
+      </div>
+      <div v-else-if="relation" class="pc__rel" :title="relation">{{ relation }}</div>
       <div class="pc__name" :title="shortName(person)">
-        <span v-if="home" class="pc__home" title="Это Вы">
-          <q-icon name="sym_r_home" size="13px" />
-        </span>
         {{ person.firstName || 'Без имени' }} <b>{{ person.lastName }}</b>
       </div>
       <div class="pc__meta">
@@ -130,6 +131,47 @@ const relation = computed(() => (store.ui.showRelation && !props.home ? store.re
   border-style: dashed;
 }
 
+/* Карточка «Это Вы» — от неё строится дерево, поэтому заливка яркая, текст белый. */
+.pc--home {
+  background: linear-gradient(135deg, #ff7a45, var(--ft-primary) 55%, #c93d18);
+  border-color: #c93d18;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--ft-primary) 28%, transparent),
+    var(--ft-shadow-lg);
+  &::before {
+    display: none;
+  }
+  &:hover {
+    border-color: #fff;
+  }
+  &.pc--selected {
+    border-color: #fff;
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--ft-primary) 55%, transparent),
+      var(--ft-shadow-lg);
+  }
+  .pc__name,
+  .pc__meta,
+  .pc__rel {
+    color: #fff;
+  }
+  .pc__meta {
+    opacity: 0.9;
+  }
+  :deep(.pa) {
+    background: #fff;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .pc__edit {
+    color: #fff;
+    opacity: 0.8;
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+      color: #fff;
+    }
+  }
+}
+
 .pc__body {
   position: relative;
   min-width: 0;
@@ -148,17 +190,6 @@ const relation = computed(() => (store.ui.showRelation && !props.home ? store.re
   b {
     font-weight: 700;
   }
-}
-.pc__home {
-  display: inline-grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 5px;
-  background: var(--ft-primary);
-  color: #fff;
-  vertical-align: -3px;
-  margin-right: 2px;
 }
 .pc__meta {
   margin-top: 3px;
@@ -179,6 +210,13 @@ const relation = computed(() => (store.ui.showRelation && !props.home ? store.re
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.pc__rel--me {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 button {
