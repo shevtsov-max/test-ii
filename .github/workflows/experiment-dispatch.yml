@@ -1,0 +1,18 @@
+name: Rebuild preview after experiment push
+
+# Публиковать на Pages можно только из main, поэтому пуш в ветку эксперимента
+# просто запускает deploy.yml на main — он соберёт и основную версию, и эксперименты.
+on:
+  push:
+    branches: ['experiment/**']
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
