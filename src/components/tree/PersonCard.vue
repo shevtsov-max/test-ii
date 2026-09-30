@@ -11,13 +11,17 @@ const props = defineProps({
   home: Boolean,
   moreUp: Boolean,
   moreDown: Boolean,
+  /** Ветка раскрыта кнопкой «показать» — на её месте кнопка «скрыть» */
+  collapseUp: Boolean,
+  collapseDown: Boolean,
   dup: Boolean,
 })
-const emit = defineEmits(['select', 'open', 'edit', 'add', 'camera', 'expand'])
+const emit = defineEmits(['select', 'open', 'edit', 'add', 'camera', 'expand', 'collapse'])
 const store = useTreeStore()
 
 const span = computed(() => lifeSpan(props.person))
-const relation = computed(() => (store.ui.showRelation ? store.relationToHome(props.person.id) : ''))
+// Кем человек приходится «Вам» (отмеченной домиком персоне). Для самой персоны подпись не нужна — есть значок.
+const relation = computed(() => (store.ui.showRelation && !props.home ? store.relationToHome(props.person.id) : ''))
 </script>
 
 <template>
@@ -34,13 +38,22 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
     @dblclick.stop="emit('open')"
     @keydown.enter.prevent="emit('select')"
   >
-    <button v-if="moreUp" class="pc__more pc__more--up" title="Показать предков" @click.stop="emit('expand')">
+    <button v-if="moreUp" class="pc__more pc__more--up" title="Показать предков" @click.stop="emit('expand', 'up')">
       <q-icon name="sym_r_keyboard_arrow_up" size="16px" />
+    </button>
+    <button
+      v-else-if="collapseUp"
+      class="pc__more pc__more--up pc__more--close"
+      title="Скрыть предков"
+      @click.stop="emit('collapse', 'up')"
+    >
+      <q-icon name="sym_r_close" size="14px" />
     </button>
 
     <PersonAvatar :person="person" :size="44" camera :photos="store.ui.showPhotos" @camera="emit('camera')" />
 
     <div class="pc__body">
+      <div v-if="relation" class="pc__rel" :title="relation">{{ relation }}</div>
       <div class="pc__name" :title="shortName(person)">
         <span v-if="home" class="pc__home" title="Это Вы">
           <q-icon name="sym_r_home" size="13px" />
@@ -49,7 +62,6 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
       </div>
       <div class="pc__meta">
         <span v-if="store.ui.showYears && span">{{ span }}</span>
-        <span v-if="relation" class="pc__rel">{{ relation }}</span>
       </div>
     </div>
 
@@ -61,8 +73,16 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
       <q-icon name="sym_r_add" size="16px" />
       <span class="pc__add-label">Добавить</span>
     </button>
-    <button v-if="moreDown" class="pc__more pc__more--down" title="Показать потомков" @click.stop="emit('expand')">
+    <button v-if="moreDown" class="pc__more pc__more--down" title="Показать потомков" @click.stop="emit('expand', 'down')">
       <q-icon name="sym_r_keyboard_arrow_down" size="16px" />
+    </button>
+    <button
+      v-else-if="collapseDown"
+      class="pc__more pc__more--down pc__more--close"
+      title="Скрыть потомков"
+      @click.stop="emit('collapse', 'down')"
+    >
+      <q-icon name="sym_r_close" size="14px" />
     </button>
   </div>
 </template>
@@ -75,7 +95,7 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 30px 0 10px;
+  padding: 0 10px;
   border-radius: 14px;
   background: var(--ft-surface);
   border: 1.5px solid color-mix(in srgb, var(--g) 55%, transparent);
@@ -170,8 +190,12 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
   text-overflow: ellipsis;
 }
 .pc__rel {
+  margin-bottom: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.25;
   color: var(--g);
-  font-weight: 600;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -278,6 +302,25 @@ button {
   &:hover {
     transform: scale(1.15);
   }
+}
+.pc__more--close {
+  width: 20px;
+  height: 20px;
+  background: var(--ft-surface);
+  color: var(--ft-muted);
+  border: 1.5px solid color-mix(in srgb, var(--g) 55%, transparent);
+  &:hover {
+    background: var(--ft-primary);
+    border-color: var(--ft-primary);
+    color: #fff;
+  }
+}
+.pc__more--up.pc__more--close {
+  top: -16px;
+  margin-left: -10px;
+}
+.pc__more--down.pc__more--close {
+  bottom: -16px;
 }
 .pc__more--up {
   top: -18px;

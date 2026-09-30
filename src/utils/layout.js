@@ -11,7 +11,8 @@
 import { orderPartners, parentFamily, spouseFamilies, partnerIn, byBirth } from './graph'
 
 export const CARD_W = 196
-export const CARD_H = 68
+/** 80 = строка родства (14) + имя в две строки (32) + годы (15) + воздух под кнопки «+» и «показать» */
+export const CARD_H = 80
 export const PH_W = 94
 export const PH_H = 58
 export const COUPLE_GAP = 36
@@ -20,6 +21,8 @@ export const PH_PAIR_GAP = 35
 export const SIB_GAP = 26
 export const GROUP_GAP = 44
 export const ROW_H = CARD_H + 88
+/** Смещение шины связи для веток, раскрытых кнопками (px, вверх) */
+const BRANCH_BUS_OFFSET = -22
 
 class Shape {
   nodes = []
@@ -423,6 +426,76 @@ export function computeLayout(t, focusId, opts) {
   nodeF.focus = true
   const all = up(focusId, S, nodeF, 0, opts.up, 'center', true)
 
+  // --- Ветки, раскрытые кнопками «Показать предков / потомков» (режим «добавлять ветку»).
+  // Существующие карточки не двигаются: новая строка (родители или дети) ставится в свободное
+  // место того же ряда как можно ближе к своей карточке и соединяется обычной связью.
+  const clusterUp = new Set()
+  const clusterDown = new Set()
+  const firstNodeOf = (pid) => all.nodes.find((n) => n.personId === pid && !n.dup) ?? all.nodes.find((n) => n.personId === pid)
+  const isShown = (pid) => all.nodes.some((n) => n.personId === pid)
+
+  /** Центр строки шириной `width` в ряду `row`, ближайший к `ideal`, не пересекающийся с карточками ряда. */
+  function freeCenter(row, width, ideal) {
+    const others = all.nodes.filter((n) => n.row === row)
+    const clear = (c) => !others.some((n) => Math.abs(n.x - c) < (n.w + width) / 2 + GROUP_GAP)
+    if (clear(ideal)) return ideal
+    for (let d = 20; d < 8000; d += 20) {
+      if (clear(ideal + d)) return ideal + d
+      if (clear(ideal - d)) return ideal - d
+    }
+    return ideal
+  }
+  const placeRow = (nodes, gap, center) => {
+    const width = nodes.length * CARD_W + (nodes.length - 1) * gap
+    nodes.forEach((n, i) => {
+      n.x = center - width / 2 + CARD_W / 2 + i * (CARD_W + gap)
+      all.add(n)
+    })
+  }
+  const rowWidth = (count, gap) => count * CARD_W + (count - 1) * gap
+
+  for (const pid of opts.expandUp ?? []) {
+    const q = firstNodeOf(pid)
+    const pf = parentFamily(t, pid)
+    if (!q || !pf || pf.partners.some(isShown)) continue
+    const parents = orderPartners(t, pf).filter((id) => id && t.persons[id])
+    if (!parents.length) continue
+    const row = q.row - 1
+    const nodes = parents.map((id) => personNode(id, row))
+    placeRow(nodes, COUPLE_GAP, freeCenter(row, rowWidth(nodes.length, COUPLE_GAP), q.x))
+    if (nodes.length === 2) {
+      all.links.push({ type: 'couple', key: `c-${pf.id}`, familyId: pf.id, status: pf.status, a: nodes[0], b: nodes[1] })
+    }
+    // busOffset: шина ветки идёт выше общей шины ряда, чтобы не сливаться с чужими линиями
+    all.links.push({ type: 'children', key: `k-${pf.id}`, familyId: pf.id, parents: nodes, children: [q], busOffset: BRANCH_BUS_OFFSET })
+    clusterUp.add(pid)
+  }
+
+  for (const pid of opts.expandDown ?? []) {
+    const p = firstNodeOf(pid)
+    if (!p) continue
+    for (const f of sf(pid)) {
+      const kids = [...f.children].filter((k) => t.persons[k] && !isShown(k)).sort(sortBirth)
+      if (!kids.length) continue
+      const nodes = kids.map((k) => personNode(k, p.row + 1))
+      // если второй партнёр стоит рядом — дети «под парой»
+      const otherId = partnerIn(f, pid)
+      const other = otherId ? all.nodes.find((n) => n.personId === otherId && n.row === p.row) : undefined
+      const pair = other && Math.abs(other.x - p.x) <= (CARD_W + COUPLE_GAP) * 1.01
+      const ideal = pair ? (p.x + other.x) / 2 : p.x
+      placeRow(nodes, SIB_GAP, freeCenter(p.row + 1, rowWidth(nodes.length, SIB_GAP), ideal))
+      all.links.push({
+        type: 'children',
+        key: `k-${f.id}`,
+        familyId: f.id,
+        parents: pair ? [p, other] : [p],
+        children: nodes,
+        busOffset: BRANCH_BUS_OFFSET,
+      })
+      clusterDown.add(pid)
+    }
+  }
+
   // --- Финальные координаты и флаги
   const shown = new Set()
   for (const n of all.nodes) if (n.personId) shown.add(n.personId)
@@ -442,6 +515,9 @@ export function computeLayout(t, focusId, opts) {
       n.moreUp = !!pf && pf.partners.length > 0 && !pf.partners.some((p) => shown.has(p))
       const kids = sf(n.personId).flatMap((f) => f.children)
       n.moreDown = kids.length > 0 && !kids.some((k) => shown.has(k))
+      // ветка раскрыта кнопкой — вместо «показать» на карточке будет «скрыть»
+      n.collapseUp = !n.dup && clusterUp.has(n.personId)
+      n.collapseDown = !n.dup && clusterDown.has(n.personId)
     }
   }
   if (!all.nodes.length) minX = minY = maxX = maxY = 0
@@ -515,7 +591,7 @@ function renderLinks(links, nodes) {
     const kids = l.children
     if (!kids.length) continue
     const childTop = kids[0].row * ROW_H + (CARD_H - kids[0].h) / 2
-    const busY = kids[0].row * ROW_H - (ROW_H - CARD_H) / 2
+    const busY = kids[0].row * ROW_H - (ROW_H - CARD_H) / 2 + (l.busOffset ?? 0)
     let ax
     let ay
     if (l.parents.length === 2) {

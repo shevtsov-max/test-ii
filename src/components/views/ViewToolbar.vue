@@ -74,6 +74,13 @@ function pick(id) {
             <q-item-section side><q-toggle v-model="store.ui.showRelation" dense /></q-item-section>
           </q-item>
           <q-item v-ripple tag="label" dense>
+            <q-item-section>
+              Раскрывать ветки на месте
+              <q-item-label caption>«Показать предков» добавляет ветку, а не перестраивает дерево</q-item-label>
+            </q-item-section>
+            <q-item-section side><q-toggle v-model="store.ui.branchMode" dense @update:model-value="store.resetBranches()" /></q-item-section>
+          </q-item>
+          <q-item v-ripple tag="label" dense>
             <q-item-section>Братья, сёстры и другие партнёры</q-item-section>
             <q-item-section side><q-toggle v-model="store.ui.siblings" dense /></q-item-section>
           </q-item>

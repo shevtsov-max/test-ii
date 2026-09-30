@@ -18,6 +18,8 @@ const layout = computed(() => {
     down: g,
     placeholders: store.ui.placeholders,
     siblings: store.ui.siblings,
+    expandUp: store.ui.branchMode ? new Set(store.ui.expandUp) : undefined,
+    expandDown: store.ui.branchMode ? new Set(store.ui.expandDown) : undefined,
   })
 })
 const shown = computed(() => layout.value.shownPersons.size)

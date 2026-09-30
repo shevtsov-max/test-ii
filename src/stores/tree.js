@@ -6,7 +6,8 @@ import { newFamily, newPerson, uid } from '@/utils/person'
 import * as G from '@/utils/graph'
 
 const LS_TREE = 'ft:tree:v1'
-const LS_UI = 'ft:ui:v1'
+// Отдельный ключ для эксперимента: настройки (режим раскрытия, подписи родства) не смешиваются с основной версией сайта
+const LS_UI = 'ft:ui:exp1'
 const HISTORY_LIMIT = 60
 
 function load(key) {
@@ -27,7 +28,11 @@ export const useTreeStore = defineStore('tree', () => {
     placeholders: true,
     showPhotos: true,
     showYears: true,
-    showRelation: false,
+    showRelation: true,
+    /** Эксперимент: «Показать предков/потомков» добавляет ветку на месте, а не перестраивает дерево вокруг другой персоны */
+    branchMode: true,
+    expandUp: [],
+    expandDown: [],
     siblings: true,
     compact: false,
     dark: false,
@@ -150,8 +155,30 @@ export const useTreeStore = defineStore('tree', () => {
 
   function setFocus(id, select = true) {
     if (!tree.value.persons[id]) return
+    if (id !== focusId.value) resetBranches()
     focusId.value = id
     if (select) selectedId.value = id
+  }
+  // ---- ветки, раскрытые кнопками «Показать предков / потомков» (порядок кликов важен: родители раньше их родителей)
+  function resetBranches() {
+    ui.value.expandUp = []
+    ui.value.expandDown = []
+  }
+  function expandBranch(dir, id) {
+    const key = dir === 'up' ? 'expandUp' : 'expandDown'
+    if (!ui.value[key].includes(id)) ui.value[key] = [...ui.value[key], id]
+  }
+  /** Скрывает ветку вместе со всеми раскрытыми в ней подветками. */
+  function collapseBranch(dir, id) {
+    if (dir === 'up') {
+      const branch = G.ancestorsWithDistance(tree.value, id)
+      ui.value.expandUp = ui.value.expandUp.filter((x) => !branch.has(x))
+    } else {
+      const branch = new Set([id])
+      const queue = [id]
+      while (queue.length) for (const k of G.childrenOf(tree.value, queue.shift())) if (!branch.has(k)) (branch.add(k), queue.push(k))
+      ui.value.expandDown = ui.value.expandDown.filter((x) => !branch.has(x))
+    }
   }
   function select(id) {
     selectedId.value = id
@@ -398,6 +425,7 @@ export const useTreeStore = defineStore('tree', () => {
     tree.value = data
     focusId.value = data.homePersonId ?? Object.keys(data.persons)[0] ?? null
     selectedId.value = focusId.value
+    resetBranches()
   }
   const loadDemo = () => replaceTree(demoTree())
   const loadOriginal = () => replaceTree(shevtsovTree())
@@ -433,7 +461,7 @@ export const useTreeStore = defineStore('tree', () => {
     canAdd,
     avatarOf,
     // actions
-    setFocus,
+    setFocus, expandBranch, collapseBranch, resetBranches,
     select,
     setHome,
     renameTree,

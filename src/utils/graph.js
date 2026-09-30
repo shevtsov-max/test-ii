@@ -163,12 +163,19 @@ function blood(t, from, to) {
   const A = ancestorsWithDistance(t, from)
   const B = ancestorsWithDistance(t, to)
   let best = null
+  let bestCount = 0
   for (const [anc, da] of A) {
     const db = B.get(anc)
     if (db === undefined) continue
-    if (!best || da + db < best.a + best.b) best = { a: da, b: db, anc }
+    if (!best || da + db < best.a + best.b) {
+      best = { a: da, b: db, anc }
+      bestCount = 1
+    } else if (da + db === best.a + best.b) bestCount++
   }
   if (!best) return null
+  // Родство через одного общего предка, у которого несколько браков (дядя — сын деда от другой жены и т. п.)
+  const sharedOne = best.a >= 1 && best.b >= 1 && !(best.a === 1 && best.b === 1) && bestCount === 1 && spouseFamilies(t, best.anc).length >= 2
+  const halfCollateral = sharedOne ? ' (сводн.)' : ''
   let half = ''
   if (best.a === 1 && best.b === 1) {
     const pa = parentFamily(t, from)
@@ -179,7 +186,7 @@ function blood(t, from, to) {
       half = cp?.gender === 'F' ? ' по матери' : cp?.gender === 'M' ? ' по отцу' : ' (сводн.)'
     }
   }
-  return { a: best.a, b: best.b, label: bloodRelation(best.a, best.b, t.persons[to], half) }
+  return { a: best.a, b: best.b, label: bloodRelation(best.a, best.b, t.persons[to], half) + halfCollateral }
 }
 
 function spouseWord(t, f, pid) {
@@ -191,7 +198,7 @@ function spouseWord(t, f, pid) {
 }
 
 /** Родство «кем приходится to для from» по-русски. */
-export function relationship(t, from, to) {
+export function relationship(t, from, to, depth = 0) {
   if (!from || !t.persons[from] || !t.persons[to]) return ''
   const bl = blood(t, from, to)
   if (bl) return bl.label
@@ -207,6 +214,7 @@ export function relationship(t, from, to) {
     if (!rel) continue
     const r = blood(t, from, rel)
     if (!r) continue
+    if (f.status === 'divorced' || f.status === 'separated') return `${spouseWord(t, f, to)} ${genitive(r.label.toLowerCase())}`
     if (r.a === 1 && r.b === 0) return g(target, 'Отчим', 'Мачеха', 'Отчим/мачеха')
     if (r.a === 0 && r.b === 1) return g(target, 'Зять', 'Невестка', 'Зять/невестка')
     if (r.a === 1 && r.b === 1) return g(target, 'Зять', 'Невестка', 'Зять/невестка')
@@ -225,6 +233,23 @@ export function relationship(t, from, to) {
     if (r.a === 1 && r.b === 1) return wife ? g(target, 'Шурин', 'Свояченица') : g(target, 'Деверь', 'Золовка')
     const spW = t.persons[sp]?.gender === 'F' ? 'жены' : t.persons[sp]?.gender === 'M' ? 'мужа' : 'супруга'
     return `${r.label} ${spW}`
+  }
+  // Дальше — цепочка через ещё одного человека: «Муж свояченицы», «Бывший муж невестки», «Дочь невестки»
+  if (depth === 0) {
+    const known = (id) => {
+      const r = relationship(t, from, id, 1)
+      return r && r !== 'Родственник' && r !== 'Это Вы' ? r : ''
+    }
+    for (const f of spouseFamilies(t, to)) {
+      const other = partnerIn(f, to)
+      const r = other && known(other)
+      if (r) return `${spouseWord(t, f, to)} ${genitive(r.toLowerCase())}`
+    }
+    const pf = parentFamily(t, to)
+    for (const par of pf?.partners ?? []) {
+      const r = known(par)
+      if (r) return `${g(target, 'Сын', 'Дочь', 'Ребёнок')} ${genitive(r.toLowerCase())}`
+    }
   }
   return 'Родственник'
 }

@@ -243,6 +243,7 @@ let prevNodes = snapshot(props.layout.nodes)
 let prevFocusId = store.focusId
 let prevGen = store.ui.generations
 let pendingOriginKey = null
+let pendingBranchKey = null
 let tTravel, tLinks, tEnter, tPulse, tChip, tExpand
 
 function startTravel() {
@@ -268,6 +269,7 @@ watch(
     syncOrder(nl.nodes)
     const focusChanged = store.focusId !== prevFocusId
     const genChanged = store.ui.generations !== prevGen
+    const branchKey = pendingBranchKey
 
     // Якорь: новый центр, если он уже был на экране, иначе ближайший к нему общий узел
     const fk = nl.focusNode?.key
@@ -321,6 +323,14 @@ watch(
         entering.value = null
         nextTick(() => centerFocus(false))
       }
+    } else if (branchKey && changed && next.has(branchKey)) {
+      // Ветка раскрыта на месте: новые карточки вырастают из нажатой, камера мягко показывает их целиком
+      const o = next.get(branchKey)
+      const keys = new Set([...next.keys()].filter((key) => !prevNodes.has(key)))
+      entering.value = { keys, origin: { left: o.left + newShift.x, top: o.top + newShift.y, row: o.row }, base: 60 }
+      clearTimeout(tEnter)
+      tEnter = setTimeout(() => (entering.value = null), 2200)
+      nextTick(() => reveal(keys, branchKey))
     } else if (focusChanged || genChanged) {
       nextTick(() => centerFocus(true))
     }
@@ -332,6 +342,7 @@ watch(
     }
 
     pendingOriginKey = null
+    pendingBranchKey = null
     prevNodes = next
     prevFocusId = store.focusId
     prevGen = store.ui.generations
@@ -360,7 +371,7 @@ function nodeStyle(n) {
     st['--fy'] = e.origin.top + 'px'
     st['--tx'] = left + 'px'
     st['--ty'] = top + 'px'
-    st['--delay'] = Math.min(800, 280 + Math.abs(n.row - e.origin.row) * 120) + 'ms'
+    st['--delay'] = Math.min(800, (e.base ?? 280) + Math.abs(n.row - e.origin.row) * 120) + 'ms'
   }
   return st
 }
@@ -386,7 +397,65 @@ function onSelect(n) {
   store.select(n.personId)
   if (!store.ui.panelOpen && window.innerWidth >= 1024) store.ui.panelOpen = true
 }
-function onExpand(n) {
+/** Мягко подвинуть (и при необходимости уменьшить) вид, чтобы новая ветка и нажатая карточка были видны целиком. */
+function reveal(keys, anchorKey) {
+  const ns = props.layout.nodes.filter((n) => keys.has(n.key) || n.key === anchorKey)
+  if (!ns.length) return
+  let minX = Infinity
+  let maxX = -Infinity
+  let minY = Infinity
+  let maxY = -Infinity
+  for (const n of ns) {
+    minX = Math.min(minX, n.left + shift.value.x)
+    maxX = Math.max(maxX, n.left + n.w + shift.value.x)
+    minY = Math.min(minY, n.top + shift.value.y)
+    maxY = Math.max(maxY, n.top + n.h + shift.value.y)
+  }
+  const W = size.value.w
+  const H = size.value.h
+  const narrow = W < 640
+  const padL = 40
+  const padR = narrow ? 40 : 96 // справа — кнопки управления холстом
+  const padT = 40
+  const padB = narrow ? 150 : 60 // на телефоне снизу — карточка выбранной персоны
+  const availW = W - padL - padR
+  const availH = H - padT - padB
+  let nk = k.value
+  const fitK = Math.min(availW / (maxX - minX), availH / (maxY - minY))
+  if (fitK < nk) nk = Math.max(MIN_K, fitK)
+  // центр вида остаётся прежним, дальше сдвигаем минимально необходимое
+  const cx = (W / 2 - tx.value) / k.value
+  const cy = (H / 2 - ty.value) / k.value
+  let ntx = W / 2 - cx * nk
+  let nty = H / 2 - cy * nk
+  const left = minX * nk + ntx
+  const right = maxX * nk + ntx
+  const top = minY * nk + nty
+  const bottom = maxY * nk + nty
+  if (left < padL) ntx += padL - left
+  else if (right > W - padR) ntx -= right - (W - padR)
+  if (top < padT) nty += padT - top
+  else if (bottom > H - padB) nty -= bottom - (H - padB)
+  if (nk === k.value && Math.abs(ntx - tx.value) < 1 && Math.abs(nty - ty.value) < 1) return
+  animate(() => {
+    k.value = nk
+    tx.value = ntx
+    ty.value = nty
+  }, 700)
+}
+
+function onCollapse(n, dir) {
+  store.collapseBranch(dir, n.personId)
+}
+
+function onExpand(n, dir = 'up') {
+  if (store.ui.branchMode) {
+    // Режим «ветка на месте»: дерево не перестраивается, к нему добавляется новая строка
+    pendingBranchKey = n.key
+    pulse(n.key)
+    store.expandBranch(dir, n.personId)
+    return
+  }
   if (tExpand) return
   // Сначала подсвечиваем нажатую карточку, и только потом перестраиваем дерево
   pendingOriginKey = n.key
@@ -493,13 +562,16 @@ function goHome() {
           :home="store.homeId === n.personId"
           :more-up="n.moreUp"
           :more-down="n.moreDown"
+          :collapse-up="n.collapseUp"
+          :collapse-down="n.collapseDown"
           :dup="n.dup"
           @select="onSelect(n)"
           @open="store.setFocus(n.personId)"
           @edit="ui.editPerson(n.personId)"
           @add="openAdd(n)"
           @camera="upload(n.personId, { avatar: true })"
-          @expand="onExpand(n)"
+          @expand="onExpand(n, $event)"
+          @collapse="onCollapse(n, $event)"
         />
         <button
           v-else-if="n.kind === 'placeholder'"

@@ -5,13 +5,14 @@ import PersonCard from '@/components/tree/PersonCard.vue'
 import { useTreeStore } from '@/stores/tree'
 import { useUiStore } from '@/stores/ui'
 import { usePhotoUpload } from '@/composables/usePhoto'
+import { CARD_H } from '@/utils/layout'
 
 const store = useTreeStore()
 const ui = useUiStore()
 const { upload } = usePhotoUpload()
 
 const CW = 210
-const CH = 68
+const CH = CARD_H
 const GAP_X = 70
 const GAP_Y = 34
 const MAX = 5
