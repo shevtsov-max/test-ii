@@ -7,6 +7,8 @@ import * as G from '@/utils/graph'
 
 const LS_TREE = 'ft:tree:v1'
 const LS_UI = 'ft:ui:v1'
+/** Версия сохранённых настроек: 2 — подписи родства на карточках включены по умолчанию */
+const UI_VERSION = 2
 const HISTORY_LIMIT = 60
 
 function load(key) {
@@ -27,13 +29,15 @@ export const useTreeStore = defineStore('tree', () => {
     placeholders: true,
     showPhotos: true,
     showYears: true,
-    showRelation: false,
+    showRelation: true,
     siblings: true,
     compact: false,
     dark: false,
     panelOpen: true,
     view: 'family',
     ...savedUi,
+    ...((savedUi.uiVersion ?? 1) < UI_VERSION ? { showRelation: true } : {}),
+    uiVersion: UI_VERSION,
   })
 
   const firstId = () => tree.value.homePersonId ?? Object.keys(tree.value.persons)[0] ?? null

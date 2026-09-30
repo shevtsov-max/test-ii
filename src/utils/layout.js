@@ -11,7 +11,8 @@
 import { orderPartners, parentFamily, spouseFamilies, partnerIn, byBirth } from './graph'
 
 export const CARD_W = 196
-export const CARD_H = 68
+/** 80 = строка родства (14) + имя в две строки (32) + годы (15) + воздух под кнопки «+» и «показать» */
+export const CARD_H = 80
 export const PH_W = 94
 export const PH_H = 58
 export const COUPLE_GAP = 36

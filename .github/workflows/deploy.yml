@@ -19,7 +19,7 @@ env:
   # Ветки-эксперименты, которые публикуются рядом с основным сайтом, через пробел: "путь=ветка".
   # experiment=experiment/inline-branches  →  https://<user>.github.io/<repo>/experiment/
   # Пуш в ветку эксперимента запускает пересборку (см. experiment-dispatch.yml). Пустое значение — без экспериментов.
-  EXPERIMENTS: "experiment=experiment/inline-branches"
+  EXPERIMENTS: ""
 
 jobs:
   build:

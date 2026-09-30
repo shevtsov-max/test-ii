@@ -17,7 +17,8 @@ const emit = defineEmits(['select', 'open', 'edit', 'add', 'camera', 'expand'])
 const store = useTreeStore()
 
 const span = computed(() => lifeSpan(props.person))
-const relation = computed(() => (store.ui.showRelation ? store.relationToHome(props.person.id) : ''))
+// Кем человек приходится «Вам» (отмеченной домиком персоне). Для самой персоны подпись не нужна — есть значок.
+const relation = computed(() => (store.ui.showRelation && !props.home ? store.relationToHome(props.person.id) : ''))
 </script>
 
 <template>
@@ -41,6 +42,7 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
     <PersonAvatar :person="person" :size="44" camera :photos="store.ui.showPhotos" @camera="emit('camera')" />
 
     <div class="pc__body">
+      <div v-if="relation" class="pc__rel" :title="relation">{{ relation }}</div>
       <div class="pc__name" :title="shortName(person)">
         <span v-if="home" class="pc__home" title="Это Вы">
           <q-icon name="sym_r_home" size="13px" />
@@ -49,7 +51,6 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
       </div>
       <div class="pc__meta">
         <span v-if="store.ui.showYears && span">{{ span }}</span>
-        <span v-if="relation" class="pc__rel">{{ relation }}</span>
       </div>
     </div>
 
@@ -75,7 +76,7 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 30px 0 10px;
+  padding: 0 10px;
   border-radius: 14px;
   background: var(--ft-surface);
   border: 1.5px solid color-mix(in srgb, var(--g) 55%, transparent);
@@ -170,8 +171,12 @@ const relation = computed(() => (store.ui.showRelation ? store.relationToHome(pr
   text-overflow: ellipsis;
 }
 .pc__rel {
+  margin-bottom: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.25;
   color: var(--g);
-  font-weight: 600;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
