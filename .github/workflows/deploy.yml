@@ -33,8 +33,10 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # Сбой сборки эксперимента не должен ломать публикацию основного сайта
       - name: Build experiment branches
         if: github.event_name != 'pull_request'
+        continue-on-error: true
         run: |
           for pair in $EXPERIMENTS; do
             path="${pair%%=*}"
